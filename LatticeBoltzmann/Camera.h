@@ -39,6 +39,13 @@ public:
 	Camera(glm::vec3 position, glm::vec3 up = WORLD_UP, float yaw = -90.0f, float pitch = 0.0f);
 	~Camera();
 
+	virtual glm::mat4 getViewMatrix() = 0;
+	virtual void processKeyboardMovement(CameraMovementDirection direction, float deltaTime) = 0;
+	virtual void processMouseScroll(float yoffset) = 0;
+	virtual void setView(CameraView camView);
+	virtual void printInfo();
+
+
 protected:
 
 	virtual void updateCameraVectors() = 0;

@@ -2,6 +2,8 @@
 
 #include "Config.h"
 
+#include "LBM.h"
+
 #include "ShaderProgram.h"
 #include "ParticleSystem.h"
 #include "LatticeCollider.h"

@@ -1,6 +1,11 @@
 #include "Camera.h"
 
+#include <iostream>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
+
+using namespace std;
 
 Camera::Camera() {
 }
@@ -14,6 +19,9 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 Camera::~Camera() {
 }
 
+void Camera::setView(CameraView camView) {
+}
 
-//void Camera::updateCameraVectors() {
-//}
+void Camera::printInfo() {
+	cout << "Camera position: " << glm::to_string(position) << endl;
+}

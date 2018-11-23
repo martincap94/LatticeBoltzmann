@@ -11,6 +11,8 @@
 
 #include <vector>
 
+#include "LBM.h"
+
 // temporary -> will be moved to special header file to be shared
 // among all classes (Node -> Node2D and Node3D)
 // this applies to Node, vRight, ..., EDirection
@@ -41,39 +43,7 @@ enum EDirection {
 };
 
 
-class LBM2D_1D_indices {
-	
-	/*struct Node {
-		float adj[9];
-	};*/
-
-	//struct Node {
-	//	float adj[9];
-	//};
-
-	
-
-
-	//const glm::vec3 vRight = glm::vec3(1.0f, 0.0f, 0.0f);
-	//const glm::vec3 vTop = glm::vec3(0.0f, 1.0f, 0.0f);
-	//const glm::vec3 vLeft = glm::vec3(-1.0f, 0.0f, 0.0f);
-	//const glm::vec3 vBottom = glm::vec3(0.0f, -1.0f, 0.0f);
-	//const glm::vec3 vTopRight = glm::vec3(1.0f, 1.0f, 0.0f);
-	//const glm::vec3 vTopLeft = glm::vec3(-1.0f, 1.0f, 0.0f);
-	//const glm::vec3 vBottomLeft = glm::vec3(-1.0f, -1.0f, 0.0f);
-	//const glm::vec3 vBottomRight = glm::vec3(1.0f, -1.0f, 0.0f);
-
-	//enum EDirection {
-	//	DIR_MIDDLE = 0,
-	//	DIR_RIGHT,
-	//	DIR_TOP,
-	//	DIR_LEFT,
-	//	DIR_BOTTOM,
-	//	DIR_TOP_RIGHT,
-	//	DIR_TOP_LEFT,
-	//	DIR_BOTTOM_LEFT,
-	//	DIR_BOTTOM_RIGHT
-	//};
+class LBM2D_1D_indices : public LBM {
 
 	const float WEIGHT_MIDDLE = 4.0f / 9.0f;
 	const float WEIGHT_AXIS = 1.0f / 9.0f;
@@ -115,21 +85,21 @@ public:
 	LBM2D_1D_indices(ParticleSystem *particleSystem);
 	~LBM2D_1D_indices();
 
-	void draw(ShaderProgram &shader);
+	virtual void draw(ShaderProgram &shader);
 
-	void doStep();
-	void doStepCUDA();
+	virtual void doStep();
+	virtual void doStepCUDA();
 
-	void clearBackLattice();
-	void streamingStep();
-	void collisionStep();
+	virtual void clearBackLattice();
+	virtual void streamingStep();
+	virtual void collisionStep();
 	void collisionStepStreamlined();
 	void collisionStepCUDA();
 
-	void moveParticles();
-	void updateInlets();
+	virtual void moveParticles();
+	virtual void updateInlets();
 	void updateInlets(Node *lattice);
-	void updateColliders();
+	virtual void updateColliders();
 	void updateCollidersAlt();
 
 

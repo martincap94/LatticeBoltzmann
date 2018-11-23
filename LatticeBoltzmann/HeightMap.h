@@ -18,6 +18,9 @@ public:
 
 	float **data;
 
+	ShaderProgram *shader;
+
+
 
 	HeightMap();
 	HeightMap(string filename, ShaderProgram *shader);
@@ -30,7 +33,6 @@ private:
 	GLuint VAO;
 	GLuint VBO;
 
-	ShaderProgram *shader;
 
 	int numPoints = 0;
 

@@ -16,7 +16,11 @@
 
 #include <random>
 #include <ctime>
+#include <fstream>
+#include <string>
+#include <algorithm>
 
+#include "LBM.h"
 #include "LBM2D.h"
 #include "LBM2D_reindexed.h"
 #include "LBM2D_1D_indices.h"
@@ -32,7 +36,7 @@
 #include "OrbitCamera.h"
 #include "ParticleSystem.h"
 #include "DirectionalLight.h"
-
+#include "Grid.h"
 
 
 
@@ -43,16 +47,24 @@ int runApp();
 void processInput(GLFWwindow* window);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+void loadConfigFile();
+void saveConfigParam(string param, string val);
 
+enum LBMType {
+	LBM2D,
+	LBM3D,
+	LBM2D_arr,
+	LBM3D_arr
+};
 
-#ifdef RUN_LBM3D
-//Camera2D camera(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, -10.0f);
-OrbitCamera camera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 10.0f, glm::vec3(GRID_WIDTH / 2.0f, GRID_HEIGHT / 2.0f, GRID_DEPTH / 2.0f));
+LBMType lbmType;
 
-#endif
-#ifdef RUN_LBM2D
-Camera2D camera(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, 0.0f);
-#endif
+LBM *lbm;
+Grid *grid;
+Camera *camera;
+
+int vsync = 0;
+
 float deltaTime = 0.0f;
 float lastFrameTime;
 
@@ -73,6 +85,9 @@ int main(int argc, char **argv) {
 }
 
 int runApp() {
+
+	loadConfigFile();
+	//return 1; /////////////////////////////////////////////////////////////////
 
 	glfwInit();
 
@@ -104,11 +119,48 @@ int runApp() {
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 
 
+	glViewport(0, 0, screenWidth, screenHeight);
+
+	float nearPlane = 0.1f;
+	float farPlane = 1000.0f;
+
+	float aspectRatio = screenWidth / screenHeight;
+
+
+
+	ParticleSystem particles(NUM_PARTICLES);
+
+	HeightMap heightMap(HEIGHTMAP_FILENAME, nullptr); // temporary fix, no need to load for 2D
+
+	float projWidth;
+	switch (lbmType) {
+		case LBM2D:
+			printf("LBM2D SETUP...\n");
+			lbm = new LBM2D_1D_indices(&particles);
+			projWidth = (GRID_WIDTH > GRID_HEIGHT) ? GRID_WIDTH : GRID_HEIGHT;
+			projection = glm::ortho(-1.0f, projWidth, -1.0f, projWidth, nearPlane, farPlane);
+			grid = new Grid3D(6, 6, 6);
+			camera = new Camera2D(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, 0.0f);
+			break;
+		case LBM3D:
+		default:
+			printf("LBM3D SETUP...\n");
+			lbm = new LBM3D_1D_indices(&particles, &heightMap);
+			projection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, nearPlane, farPlane);
+			grid = new Grid2D();
+			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 10.0f, glm::vec3(GRID_WIDTH / 2.0f, GRID_HEIGHT / 2.0f, GRID_DEPTH / 2.0f));
+			break;
+	}
+
+
+
 
 	ShaderProgram singleColorShader("singleColor.vert", "singleColor.frag");
 	ShaderProgram singleColorShaderAlpha("singleColor.vert", "singleColor_alpha.frag");
 	ShaderProgram unlitColorShader("unlitColor.vert", "unlitColor.frag");
 	ShaderProgram dirLightOnlyShader("dirLightOnly.vert", "dirLightOnly.frag");
+
+	heightMap.shader = &dirLightOnlyShader;
 
 	DirectionalLight dirLight;
 	dirLight.direction = glm::vec3(1.0f, 45.0f, 1.0f);
@@ -122,32 +174,9 @@ int runApp() {
 	dirLightOnlyShader.setVec3("dirLight.ambient", dirLight.ambient);
 	dirLightOnlyShader.setVec3("dirLight.diffuse", dirLight.diffuse);
 	dirLightOnlyShader.setVec3("dirLight.specular", dirLight.specular);
-	dirLightOnlyShader.setVec3("vViewPos", camera.position);
-
-#ifdef RUN_LBM3D
-	Grid3D grid(6, 6, 6);
-	HeightMap heightMap(HEIGHTMAP_FILENAME, &dirLightOnlyShader);
-#endif
-#ifdef RUN_LBM2D
-	Grid2D grid;
-#endif
+	dirLightOnlyShader.setVec3("vViewPos", camera->position);
 
 
-	glViewport(0, 0, screenWidth, screenHeight);
-
-	float nearPlane = 0.1f;
-	float farPlane = 1000.0f;
-
-	float aspectRatio = screenWidth / screenHeight;
-
-#ifdef RUN_LBM2D
-	float projWidth = (GRID_WIDTH > GRID_HEIGHT) ? GRID_WIDTH : GRID_HEIGHT;
-
-	projection = glm::ortho(-1.0f, projWidth, -1.0f, projWidth, nearPlane, farPlane);
-#endif
-#ifdef RUN_LBM3D
-	projection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, nearPlane, farPlane);
-#endif
 
 	glUseProgram(singleColorShader.id);
 	singleColorShader.setMat4fv("projection", projection);
@@ -161,30 +190,6 @@ int runApp() {
 
 	GeneralGrid gGrid(100, 5);
 
-	ParticleSystem particles(NUM_PARTICLES);
-
-#ifdef RUN_LBM2D
-
-#ifdef USE_REINDEXED_LBM2D
-	//LBM2D_reindexed lbm2D(&particles);
-	LBM2D_1D_indices lbm2D(&particles);
-
-#else
-	LBM2D lbm2D(GRID_WIDTH, GRID_HEIGHT, &particles);
-#endif
-
-#endif
-#ifdef RUN_LBM3D
-
-#ifdef USE_REINDEXED_LBM3D
-	LBM3D_1D_indices lbm3D(&particles, &heightMap);
-#else
-	LBM3D lbm3D(&particles);
-#endif
-
-
-#endif
-
 	int frameCounter = 0;
 
 
@@ -195,7 +200,7 @@ int runApp() {
 
 	glEnable(GL_DEPTH_TEST);
 
-	glfwSwapInterval(0); // V-Sync Settings (0 is off, 1 is 60FPS, 2 is 30FPS and so on)
+	glfwSwapInterval(vsync); // V-Sync Settings (0 is off, 1 is 60FPS, 2 is 30FPS and so on)
 
 	while (!glfwWindowShouldClose(window)) {
 
@@ -204,7 +209,7 @@ int runApp() {
 		float currentFrameTime = glfwGetTime();
 		deltaTime = currentFrameTime - lastFrameTime;
 		lastFrameTime = currentFrameTime;
-		cout << " Delta time = " << (deltaTime * 1000.0f) << " [ms]" << endl;
+		//cout << " Delta time = " << (deltaTime * 1000.0f) << " [ms]" << endl;
 		//cout << " Framerate = " << (1.0f / deltaTime) << endl;
 
 		//glClearColor(0.1f, 0.4f, 0.4f, 1.0f);
@@ -216,23 +221,14 @@ int runApp() {
 		processInput(window);
 
 
-#ifdef RUN_LBM2D
 #ifdef USE_CUDA
-		lbm2D.doStepCUDA();
+		lbm->doStepCUDA();
 #else
-		lbm2D.doStep();
-#endif
-#endif
-#ifdef RUN_LBM3D
-#ifdef USE_CUDA
-		lbm3D.doStepCUDA();
-#else
-		lbm3D.doStep();
-#endif
+		lbm->doStep();
 #endif
 
 
-		view = camera.getViewMatrix();
+		view = camera->getViewMatrix();
 
 		glUseProgram(singleColorShader.id);
 		singleColorShader.setMat4fv("view", view);
@@ -243,7 +239,7 @@ int runApp() {
 
 		glUseProgram(dirLightOnlyShader.id);
 		dirLightOnlyShader.setMat4fv("uView", view);
-		dirLightOnlyShader.setVec3("vViewPos", camera.position);
+		dirLightOnlyShader.setVec3("vViewPos", camera->position);
 
 		//unlitColorShader.setMat4fv("uProjection", projection);
 
@@ -251,14 +247,9 @@ int runApp() {
 		singleColorShaderAlpha.setMat4fv("view", view);
 
 
-		grid.draw(singleColorShader);
+		grid->draw(singleColorShader);
 
-#ifdef RUN_LBM2D
-		lbm2D.draw(singleColorShader);
-#endif
-#ifdef RUN_LBM3D
-		lbm3D.draw(singleColorShader);
-#endif
+		lbm->draw(singleColorShader);
 
 
 
@@ -277,6 +268,10 @@ int runApp() {
 
 	}
 
+	delete lbm;
+	delete grid;
+	delete camera;
+
 	glfwTerminate();
 	return 0;
 }
@@ -289,39 +284,39 @@ void processInput(GLFWwindow* window) {
 		glfwSetWindowShouldClose(window, true);
 	}
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-		camera.processKeyboardMovement(Camera::UP, deltaTime);
+		camera->processKeyboardMovement(Camera::UP, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-		camera.processKeyboardMovement(Camera::DOWN, deltaTime);
+		camera->processKeyboardMovement(Camera::DOWN, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-		camera.processKeyboardMovement(Camera::LEFT, deltaTime);
+		camera->processKeyboardMovement(Camera::LEFT, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-		camera.processKeyboardMovement(Camera::RIGHT, deltaTime);
+		camera->processKeyboardMovement(Camera::RIGHT, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-		camera.processKeyboardMovement(Camera::ROTATE_RIGHT, deltaTime);
+		camera->processKeyboardMovement(Camera::ROTATE_RIGHT, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-		camera.processKeyboardMovement(Camera::ROTATE_LEFT, deltaTime);
+		camera->processKeyboardMovement(Camera::ROTATE_LEFT, deltaTime);
 	}
 #ifdef RUN_LBM3D
 	if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
-		camera.setView(Camera::VIEW_FRONT);
+		camera->setView(Camera::VIEW_FRONT);
 	}
 	if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
-		camera.setView(Camera::VIEW_SIDE);
+		camera->setView(Camera::VIEW_SIDE);
 	}	
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
-		camera.setView(Camera::VIEW_TOP);
+		camera->setView(Camera::VIEW_TOP);
 	}
 
 #endif
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-	camera.ProcessMouseScroll(yoffset);
+	camera->processMouseScroll(yoffset);
 }
 
 
@@ -342,4 +337,63 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 		mouseCoords = glm::inverse(view) * glm::inverse(projection) * mouseCoords;
 		cout << "mouse coords = " << glm::to_string(mouseCoords) << endl;
 	}
+}
+
+void loadConfigFile() {
+
+	ifstream infile(CONFIG_FILE);
+
+	string line;
+
+	while (infile.good()) {
+
+		getline(infile, line);
+
+		// ignore comments
+		if (line.find("//") == 0 || line.length() == 0) {
+			continue;
+		}
+		// get rid of comments at the end of the line
+		int idx = line.find("//");
+		line = line.substr(0, idx);
+
+		idx = line.find(":");
+		// delete whitespace
+		line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
+
+		
+		string param = line.substr(0, idx);
+		string val = line.substr(idx + 1, line.length() - 1);
+
+		//cout << "param = " << param << ", val = " << val << endl;
+		cout << param << ": " << val << endl;
+
+		saveConfigParam(param, val);
+
+
+	}
+
+
+
+
+
+}
+
+void saveConfigParam(string param, string val) {
+
+	if (param == "LBM_type") {
+		if (val == "2D") {
+			lbmType = LBM2D;
+		} else if (val == "3D") {
+			lbmType = LBM3D;
+		} else if (val == "2D_arr") {
+			lbmType = LBM2D_arr;
+		} else if (val == "3D_arr") {
+			lbmType = LBM3D_arr;
+		}
+	} else if (param == "VSync") {
+		vsync = stoi(val);
+	}
+
+
 }

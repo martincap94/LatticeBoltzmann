@@ -22,15 +22,15 @@ public:
 	OrbitCamera(glm::vec3 position, glm::vec3 up = WORLD_UP, float yaw = -90.0f, float pitch = 0.0f, glm::vec3 focusPoint = glm::vec3(0.0f));
 	~OrbitCamera();
 
-	glm::mat4 getViewMatrix();
-	void processKeyboardMovement(CameraMovementDirection direction, float deltaTime);
-	void setView(CameraView camView);
-	void ProcessMouseScroll(float yoffset);
-	void printInfo();
+	virtual glm::mat4 getViewMatrix();
+	virtual void processKeyboardMovement(CameraMovementDirection direction, float deltaTime);
+	virtual void setView(CameraView camView);
+	virtual void processMouseScroll(float yoffset);
+	virtual void printInfo();
 
 private:
 
-	void updateCameraVectors();
+	virtual void updateCameraVectors();
 
 };
 

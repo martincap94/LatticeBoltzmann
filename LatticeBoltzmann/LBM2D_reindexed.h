@@ -8,8 +8,9 @@
 
 #include <vector>
 
+#include "LBM.h"
 
-class LBM2D_reindexed {
+class LBM2D_reindexed : public LBM {
 	
 	/*struct Node {
 		float adj[9];

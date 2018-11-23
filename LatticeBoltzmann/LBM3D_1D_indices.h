@@ -5,14 +5,19 @@
 #include "DataStructures.h"
 #include "HeightMap.h"
 
+#include <cuda_gl_interop.h>
+
+
 #include <vector>
+
+#include "LBM.h"
 
 __constant__ glm::vec3 dirVectorsConst[19];
 __constant__ float WEIGHT_MIDDLE;
 __constant__ float WEIGHT_AXIS;
 __constant__ float WEIGHT_NON_AXIAL;
 
-class LBM3D_1D_indices {
+class LBM3D_1D_indices : public LBM {
 
 	//struct Node3D {
 	//	float adj[19];
@@ -109,23 +114,25 @@ public:
 	HeightMap *testHM;
 
 
+	struct cudaGraphicsResource *cuda_vbo_resource;
+
+
+
 	LBM3D_1D_indices();
 	LBM3D_1D_indices(ParticleSystem *particleSystem, HeightMap *heightMap);
 	~LBM3D_1D_indices();
 
-	void draw(ShaderProgram &shader);
+	virtual void draw(ShaderProgram &shader);
 
-	void doStep();
-	void doStepCUDA();
-	void clearBackLattice();
-	void streamingStep();
-	void collisionStep();
-	void collisionStepCUDA();
-	void moveParticles();
-	void updateInlets();
+	virtual void doStep();
+	virtual void doStepCUDA();
+	virtual void clearBackLattice();
+	virtual void streamingStep();
+	virtual void collisionStep();
+	virtual void moveParticles();
+	virtual void updateInlets();
 	void updateInlets(Node3D *lattice);
-	void updateColliders();
-	void updateCollidersCUDA();
+	virtual void updateColliders();
 
 
 private:

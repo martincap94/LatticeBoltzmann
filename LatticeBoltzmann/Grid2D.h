@@ -8,8 +8,9 @@
 #include <vector>
 #include "ShaderProgram.h"
 
+#include "Grid.h"
 
-class Grid2D {
+class Grid2D : public Grid {
 
 public:
 
@@ -22,6 +23,6 @@ public:
 	Grid2D();
 	~Grid2D();
 
-	void draw(ShaderProgram &shader);
+	virtual void draw(ShaderProgram &shader);
 };
 

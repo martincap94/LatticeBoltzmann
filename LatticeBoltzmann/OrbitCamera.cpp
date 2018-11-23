@@ -71,7 +71,7 @@ void OrbitCamera::processKeyboardMovement(CameraMovementDirection direction, flo
 	}*/
 }
 
-void OrbitCamera::ProcessMouseScroll(float yoffset) {
+void OrbitCamera::processMouseScroll(float yoffset) {
 
 	// TO DO?
 }

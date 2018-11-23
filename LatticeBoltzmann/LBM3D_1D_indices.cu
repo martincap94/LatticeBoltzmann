@@ -11,6 +11,70 @@ __device__ int getIdxKer(int x, int y, int z) {
 	return (x + GRID_WIDTH * (y + GRID_HEIGHT * z));
 }
 
+
+__global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec3 *velocities) {
+
+	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
+	idx += blockDim.x * blockDim.y * blockIdx.x;
+
+	glm::vec3 adjVelocities[8];
+
+	while (idx < NUM_PARTICLES) {
+
+		float x = particleVertices[idx].x;
+		float y = particleVertices[idx].y;
+		float z = particleVertices[idx].z;
+
+		int leftX = (int)x;
+		int rightX = leftX + 1;
+		int bottomY = (int)y;
+		int topY = bottomY + 1;
+		int backZ = (int)z;
+		int frontZ = backZ + 1;
+
+		adjVelocities[0] = velocities[getIdxKer(leftX, topY, backZ)];
+		adjVelocities[1] = velocities[getIdxKer(rightX, topY, backZ)];
+		adjVelocities[2] = velocities[getIdxKer(leftX, bottomY, backZ)];
+		adjVelocities[3] = velocities[getIdxKer(rightX, bottomY, backZ)];
+		adjVelocities[4] = velocities[getIdxKer(leftX, topY, frontZ)];
+		adjVelocities[5] = velocities[getIdxKer(rightX, topY, frontZ)];
+		adjVelocities[6] = velocities[getIdxKer(leftX, bottomY, frontZ)];
+		adjVelocities[7] = velocities[getIdxKer(rightX, bottomY, frontZ)];
+
+		float horizontalRatio = x - leftX;
+		float verticalRatio = y - bottomY;
+		float depthRatio = z - backZ;
+
+		glm::vec3 topBackVelocity = adjVelocities[0] * horizontalRatio + adjVelocities[1] * (1.0f - horizontalRatio);
+		glm::vec3 bottomBackVelocity = adjVelocities[2] * horizontalRatio + adjVelocities[3] * (1.0f - horizontalRatio);
+
+		glm::vec3 backVelocity = bottomBackVelocity * verticalRatio + topBackVelocity * (1.0f - verticalRatio);
+
+		glm::vec3 topFrontVelocity = adjVelocities[4] * horizontalRatio + adjVelocities[5] * (1.0f - horizontalRatio);
+		glm::vec3 bottomFrontVelocity = adjVelocities[6] * horizontalRatio + adjVelocities[7] * (1.0f - horizontalRatio);
+
+		glm::vec3 frontVelocity = bottomFrontVelocity * verticalRatio + topFrontVelocity * (1.0f - verticalRatio);
+
+		glm::vec3 finalVelocity = backVelocity * depthRatio + frontVelocity * (1.0f - depthRatio);
+
+		particleVertices[idx].x += finalVelocity.x;
+		particleVertices[idx].y += finalVelocity.y;
+		particleVertices[idx].z += finalVelocity.z;
+
+
+		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= GRID_WIDTH - 1 ||
+			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= GRID_HEIGHT - 1 ||
+			particleVertices[idx].z <= 0.0f || particleVertices[idx].z >= GRID_DEPTH - 1) {
+
+
+			particleVertices[idx].x = 0.0f;
+		}
+		idx += blockDim.x * blockDim.y * gridDim.x;
+
+	}
+}
+
+
 __global__ void moveParticlesKernel(glm::vec3 *particleVertices, glm::vec3 *velocities) {
 
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
@@ -676,36 +740,6 @@ __global__ void updateCollidersKernel(Node3D *backLattice, glm::vec3 *velocities
 			backLattice[idx].adj[DIR_BOTTOM_RIGHT_EDGE] = topLeft;
 			backLattice[idx].adj[DIR_BOTTOM_LEFT_EDGE] = topRight;
 
-			float macroDensity = 0.0f;
-			for (int i = 0; i < 19; i++) {
-				macroDensity += backLattice[idx].adj[i];
-			}
-
-			glm::vec3 macroVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
-
-			//macroVelocity += vMiddle * backLattice[idx].adj[DIR_MIDDLE];
-			macroVelocity += dirVectorsConst[DIR_LEFT_FACE] * backLattice[idx].adj[DIR_LEFT_FACE];
-			macroVelocity += dirVectorsConst[DIR_FRONT_FACE] * backLattice[idx].adj[DIR_FRONT_FACE];
-			macroVelocity += dirVectorsConst[DIR_BOTTOM_FACE] * backLattice[idx].adj[DIR_BOTTOM_FACE];
-			macroVelocity += dirVectorsConst[DIR_FRONT_LEFT_EDGE] * backLattice[idx].adj[DIR_FRONT_LEFT_EDGE];
-			macroVelocity += dirVectorsConst[DIR_BACK_LEFT_EDGE] * backLattice[idx].adj[DIR_BACK_LEFT_EDGE];
-			macroVelocity += dirVectorsConst[DIR_BOTTOM_LEFT_EDGE] * backLattice[idx].adj[DIR_BOTTOM_LEFT_EDGE];
-			macroVelocity += dirVectorsConst[DIR_TOP_LEFT_EDGE] * backLattice[idx].adj[DIR_TOP_LEFT_EDGE];
-			macroVelocity += dirVectorsConst[DIR_BOTTOM_FRONT_EDGE] * backLattice[idx].adj[DIR_BOTTOM_FRONT_EDGE];
-			macroVelocity += dirVectorsConst[DIR_TOP_FRONT_EDGE] * backLattice[idx].adj[DIR_TOP_FRONT_EDGE];
-			macroVelocity += dirVectorsConst[DIR_RIGHT_FACE] * backLattice[idx].adj[DIR_RIGHT_FACE];
-			macroVelocity += dirVectorsConst[DIR_BACK_FACE] * backLattice[idx].adj[DIR_BACK_FACE];
-			macroVelocity += dirVectorsConst[DIR_TOP_FACE] * backLattice[idx].adj[DIR_TOP_FACE];
-			macroVelocity += dirVectorsConst[DIR_BACK_RIGHT_EDGE] * backLattice[idx].adj[DIR_BACK_RIGHT_EDGE];
-			macroVelocity += dirVectorsConst[DIR_FRONT_RIGHT_EDGE] * backLattice[idx].adj[DIR_FRONT_RIGHT_EDGE];
-			macroVelocity += dirVectorsConst[DIR_TOP_RIGHT_EDGE] * backLattice[idx].adj[DIR_TOP_RIGHT_EDGE];
-			macroVelocity += dirVectorsConst[DIR_BOTTOM_RIGHT_EDGE] * backLattice[idx].adj[DIR_BOTTOM_RIGHT_EDGE];
-			macroVelocity += dirVectorsConst[DIR_TOP_BACK_EDGE] * backLattice[idx].adj[DIR_TOP_BACK_EDGE];
-			macroVelocity += dirVectorsConst[DIR_BOTTOM_BACK_EDGE] * backLattice[idx].adj[DIR_BOTTOM_BACK_EDGE];
-			macroVelocity /= macroDensity;
-
-			velocities[idx] = macroVelocity;
-
 		}
 	}
 }
@@ -788,43 +822,6 @@ __global__ void streamingStepKernel(Node3D *backLattice, Node3D *frontLattice) {
 
 
 
-void LBM3D_1D_indices::updateCollidersCUDA() {
-	cudaMemcpy(d_backLattice, backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyHostToDevice);
-
-	//updateCollidersKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities);
-
-
-	cudaMemcpy(backLattice, d_backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyDeviceToHost);
-	cudaDeviceSynchronize();
-
-}
-
-
-void LBM3D_1D_indices::collisionStepCUDA() {
-
-	cudaMemcpy(d_backLattice, backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec3) * GRID_SIZE, cudaMemcpyHostToDevice);
-
-	collisionStepKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities);
-	//cudaDeviceSynchronize();
-
-	cudaMemcpy(backLattice, d_backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyDeviceToHost);
-	cudaMemcpy(velocities, d_velocities, sizeof(glm::vec3) * GRID_SIZE, cudaMemcpyDeviceToHost);
-
-	cudaDeviceSynchronize();
-}
-
-
-
-
-
-
-
-
-
-
-
-
 
 LBM3D_1D_indices::LBM3D_1D_indices() {
 }
@@ -847,6 +844,9 @@ LBM3D_1D_indices::LBM3D_1D_indices(ParticleSystem * particleSystem, HeightMap *h
 	cudaMalloc((void**)&d_velocities, sizeof(glm::vec3) * GRID_SIZE);
 	cudaMalloc((void**)&d_testCollider, sizeof(bool) * GRID_SIZE);
 	cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * NUM_PARTICLES);
+
+	cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, particleSystem->vbo, cudaGraphicsMapFlagsWriteDiscard);
+
 
 	cudaMemcpyToSymbol(dirVectorsConst, &directionVectors3D[0], 19 * sizeof(glm::vec3));
 
@@ -871,6 +871,11 @@ LBM3D_1D_indices::LBM3D_1D_indices(ParticleSystem * particleSystem, HeightMap *h
 	initLattice();
 	initParticleSystem();
 
+	cudaMemcpy(d_backLattice, backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec3) * GRID_SIZE, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyHostToDevice);
+
+
 	//updateInlets(frontLattice);
 
 
@@ -888,6 +893,9 @@ LBM3D_1D_indices::~LBM3D_1D_indices() {
 	cudaFree(d_backLattice);
 	cudaFree(d_velocities);
 	cudaFree(d_testCollider);
+
+	cudaGraphicsUnregisterResource(cuda_vbo_resource);
+
 
 }
 
@@ -947,72 +955,33 @@ void LBM3D_1D_indices::doStep() {
 void LBM3D_1D_indices::doStepCUDA() {
 
 	// ============================================= clear back lattice CUDA
-	//clearBackLattice();
-	cudaMemcpy(d_backLattice, backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyHostToDevice);
-
 	clearBackLatticeKernel << <gridDim, blockDim >> > (d_backLattice);
 
-	cudaDeviceSynchronize();
-
 	// ============================================= update inlets CUDA
-	//updateInlets();
-	//cudaMemcpy(d_backLattice, backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyHostToDevice);
-	//cudaMemcpy(d_velocities, velocities, sizeof(glm::vec3) * GRID_SIZE, cudaMemcpyHostToDevice);
-
 	updateInletsKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities);
-	cudaDeviceSynchronize();
 
 	// ============================================= streaming step CUDA
-	//streamingStepCUDA();
-	//cudaMemcpy(d_backLattice, backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyHostToDevice);
-	//cudaMemcpy(d_velocities, velocities, sizeof(glm::vec3) * GRID_SIZE, cudaMemcpyHostToDevice);
-
 	streamingStepKernel << <gridDim, blockDim >> > (d_backLattice, d_frontLattice);
 
-	//cudaMemcpy(backLattice, d_backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyDeviceToHost);
-
-	cudaDeviceSynchronize();
-
-	//streamingStep();
-
-
 	// ============================================= update colliders CUDA
-	//updateCollidersCUDA();
-	//cudaMemcpy(d_backLattice, backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyHostToDevice);
-	//cudaMemcpy(d_velocities, velocities, sizeof(glm::vec3) * GRID_SIZE, cudaMemcpyHostToDevice);
-
 	updateCollidersKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities, d_testCollider);
 
-	//cudaMemcpy(backLattice, d_backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyDeviceToHost);
-	//cudaMemcpy(velocities, d_velocities, sizeof(glm::vec3) * GRID_SIZE, cudaMemcpyDeviceToHost);
-	cudaDeviceSynchronize();
-
-
-
-
 	// ============================================= collision step CUDA
-	//collisionStepCUDA();
-
-	//cudaMemcpy(d_backLattice, backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyHostToDevice);
-	//cudaMemcpy(d_velocities, velocities, sizeof(glm::vec3) * GRID_SIZE, cudaMemcpyHostToDevice);
-
-	//collisionStepKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities);
 	collisionStepKernelShared << <gridDim, blockDim >> > (d_backLattice, d_velocities);
 
-	//cudaDeviceSynchronize();
-
-	cudaMemcpy(backLattice, d_backLattice, sizeof(Node3D) * GRID_SIZE, cudaMemcpyDeviceToHost);
-	//cudaMemcpy(velocities, d_velocities, sizeof(glm::vec3) * GRID_SIZE, cudaMemcpyDeviceToHost);
-	// -> no need to copy front lattice back, because they will be switched
-	// -> and (frontLattice will become backLattice which will be cleared in next step)
-
-	cudaDeviceSynchronize();
-
-
-
 	// ============================================= move particles CUDA - different respawn from CPU !!!
-	//moveParticles();
+
+#ifdef USE_INTEROP
+	float3 *dptr;
+	cudaGraphicsMapResources(1, &cuda_vbo_resource, 0);
+	size_t num_bytes;
+	cudaGraphicsResourceGetMappedPointer((void **)&dptr, &num_bytes, cuda_vbo_resource);
+	//printf("CUDA mapped VBO: May access %ld bytes\n", num_bytes);
+
+	moveParticlesKernelInterop << <gridDim, blockDim >> > (dptr, d_velocities);
+
+	cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0);
+#else // USE_INTEROP - else
 
 	cudaMemcpy(d_particleVertices, particleVertices, sizeof(glm::vec3) * NUM_PARTICLES, cudaMemcpyHostToDevice);
 	moveParticlesKernel << <gridDim, blockDim >> > (d_particleVertices, d_velocities);
@@ -1036,6 +1005,7 @@ void LBM3D_1D_indices::doStepCUDA() {
 			}
 		}
 	}
+#endif
 
 
 	swapLattices();
@@ -1903,6 +1873,9 @@ void LBM3D_1D_indices::swapLattices() {
 	Node3D *tmp = frontLattice;
 	frontLattice = backLattice;
 	backLattice = tmp;
+	tmp = d_frontLattice;
+	d_frontLattice = d_backLattice;
+	d_backLattice = tmp;
 }
 
 float LBM3D_1D_indices::calculateMacroscopicDensity(int x, int y, int z) {

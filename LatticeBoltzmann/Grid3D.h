@@ -8,13 +8,14 @@
 #include <vector>
 #include "ShaderProgram.h"
 
+#include "Grid.h"
 
-class Grid3D {
+class Grid3D : public Grid {
 public:
 	Grid3D(int stepX = 1, int stepY = 1, int stepZ = 1);
 	~Grid3D();
 
-	void draw(ShaderProgram &shader);
+	virtual void draw(ShaderProgram &shader);
 
 private:
 

@@ -91,11 +91,13 @@
     </CudaCompile>
     <ClCompile Include="DirectionalLight.cpp" />
     <ClCompile Include="GeneralGrid.cpp" />
+    <ClCompile Include="Grid.cpp" />
     <ClCompile Include="Grid3D.cpp" />
     <ClCompile Include="HeightMap.cpp" />
     <ClCompile Include="LatticeCollider.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="Grid2D.cpp" />
+    <ClCompile Include="LBM.cpp" />
     <ClCompile Include="Utils.cpp" />
     <CudaCompile Include="LBM2D_1D_indices.cu">
       <FileType>CppCode</FileType>
@@ -117,11 +119,13 @@
     <ClCompile Include="DataStructures.h" />
     <ClInclude Include="DirectionalLight.h" />
     <ClInclude Include="GeneralGrid.h" />
+    <ClInclude Include="Grid.h" />
     <ClInclude Include="Grid3D.h" />
     <ClInclude Include="HeightMap.h" />
     <ClInclude Include="LatticeCollider.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="Grid2D.h" />
+    <ClInclude Include="LBM.h" />
     <ClInclude Include="LBM2D_1D_indices.h" />
     <ClInclude Include="LBM2D_reindexed.h" />
     <ClInclude Include="LBM2D.h" />

@@ -68,7 +68,7 @@ void Camera2D::setView(CameraView camView) {
 	}
 }
 
-void Camera2D::ProcessMouseScroll(float yoffset) {
+void Camera2D::processMouseScroll(float yoffset) {
 	/*if (Zoom >= 1.0f && Zoom <= 45.0f) {
 		Zoom -= yoffset;
 	}
