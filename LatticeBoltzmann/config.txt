@@ -1,0 +1,33 @@
+// Choice options: 2D, 3D, 2D_arr, 3D_arr
+LBM_type: 2D
+
+
+filename: 512x256_01.ppm
+
+// Whether to use CUDA (otherwise single-thread CPU implementation will be used) - this may be better used as define, since it will be faster
+use_CUDA: true
+// Whether to use interoperabilty between CUDA and OpenGL
+use_interoperability: true
+
+block_dim: 256
+
+// these properties are determined from the file?
+// grid_width
+// grid_height
+// grid_depth
+
+
+
+max_streamline_length: 200
+
+lattice_speed_multiplier: 1.0f
+
+num_particles: 100000
+
+camera_velocity: 60.0f
+
+tau: 0.52f
+
+
+
+

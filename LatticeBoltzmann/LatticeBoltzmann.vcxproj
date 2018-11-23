@@ -85,6 +85,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Camera2D.cpp" />
     <CudaCompile Include="DataStructures.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
@@ -112,6 +113,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Camera2D.h" />
     <ClCompile Include="DataStructures.h" />
     <ClInclude Include="DirectionalLight.h" />
     <ClInclude Include="GeneralGrid.h" />

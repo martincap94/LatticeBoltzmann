@@ -28,6 +28,7 @@
 #include "GeneralGrid.h"
 #include "ShaderProgram.h"
 #include "Camera.h"
+#include "Camera2D.h"
 #include "OrbitCamera.h"
 #include "ParticleSystem.h"
 #include "DirectionalLight.h"
@@ -45,12 +46,12 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 
 #ifdef RUN_LBM3D
-//Camera camera(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, -10.0f);
+//Camera2D camera(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, -10.0f);
 OrbitCamera camera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 10.0f, glm::vec3(GRID_WIDTH / 2.0f, GRID_HEIGHT / 2.0f, GRID_DEPTH / 2.0f));
 
 #endif
 #ifdef RUN_LBM2D
-Camera camera(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, 0.0f);
+Camera2D camera(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, 0.0f);
 #endif
 float deltaTime = 0.0f;
 float lastFrameTime;
@@ -288,32 +289,32 @@ void processInput(GLFWwindow* window) {
 		glfwSetWindowShouldClose(window, true);
 	}
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-		camera.processKeyboardMovement(UP, deltaTime);
+		camera.processKeyboardMovement(Camera::UP, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-		camera.processKeyboardMovement(DOWN, deltaTime);
+		camera.processKeyboardMovement(Camera::DOWN, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-		camera.processKeyboardMovement(LEFT, deltaTime);
+		camera.processKeyboardMovement(Camera::LEFT, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-		camera.processKeyboardMovement(RIGHT, deltaTime);
+		camera.processKeyboardMovement(Camera::RIGHT, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-		camera.processKeyboardMovement(ROTATE_RIGHT, deltaTime);
+		camera.processKeyboardMovement(Camera::ROTATE_RIGHT, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-		camera.processKeyboardMovement(ROTATE_LEFT, deltaTime);
+		camera.processKeyboardMovement(Camera::ROTATE_LEFT, deltaTime);
 	}
 #ifdef RUN_LBM3D
 	if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
-		camera.setView(VIEW_FRONT);
+		camera.setView(Camera::VIEW_FRONT);
 	}
 	if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
-		camera.setView(VIEW_SIDE);
+		camera.setView(Camera::VIEW_SIDE);
 	}	
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
-		camera.setView(VIEW_TOP);
+		camera.setView(Camera::VIEW_TOP);
 	}
 
 #endif
