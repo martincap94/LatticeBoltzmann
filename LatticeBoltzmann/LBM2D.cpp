@@ -266,7 +266,7 @@ void LBM2D::moveParticles() {
 
 
 	glm::vec2 adjVelocities[4];
-	for (int i = 0; i < NUM_PARTICLES; i++) {
+	for (int i = 0; i < particleSystem->numParticles; i++) {
 		float x = particleVertices[i].x;
 		float y = particleVertices[i].y;
 

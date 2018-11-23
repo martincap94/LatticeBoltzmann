@@ -1,6 +1,7 @@
 #pragma once
 
 #define GLM_ENABLE_EXPERIMENTAL
+#include <cuda_runtime.h>
 
 
 //#define DRAW_VELOCITY_ARROWS
@@ -9,8 +10,8 @@
 #define COLLIDER_FILENAME "512x256_01.ppm"
 #define HEIGHTMAP_FILENAME "60x40_02.ppm"
 
-#define RUN_LBM3D
-//#define RUN_LBM2D
+//#define RUN_LBM3D
+#define RUN_LBM2D
 #define USE_REINDEXED_LBM2D
 #define USE_REINDEXED_LBM3D
 
@@ -45,11 +46,9 @@
 #define LAT_SPEED_SQ (LAT_SPEED * LAT_SPEED)
 
 
-#define NUM_PARTICLES 10000
-
 #define CAMERA_VELOCITY 60.0f
 
-#define TAU 0.9f
+#define TAU 0.55f
 #define ITAU (1.0f / TAU)
 
 using namespace std;

@@ -10,6 +10,9 @@ class ParticleSystem {
 public:
 
 	int numParticles;
+	int *d_numParticles;
+	int maxNumParticles = 10000;
+
 	glm::vec3 *particleVertices;
 	//vector<glm::vec3> particleVerticesVector;
 	//vector<deque<glm::vec3>> streamLines;

@@ -1,5 +1,7 @@
 #include "ParticleSystem.h"
 
+#include <cuda_runtime.h>
+
 #define PARTICLES_3D
 
 ParticleSystem::ParticleSystem() {
@@ -15,6 +17,9 @@ ParticleSystem::ParticleSystem(int numParticles) : numParticles(numParticles) {
 	//}
 	streamLines = new glm::vec3[numParticles * MAX_STREAMLINE_LENGTH];
 
+	cudaMalloc((void**)&d_numParticles, sizeof(int));
+
+	cudaMemcpy(d_numParticles, &numParticles, sizeof(int), cudaMemcpyHostToDevice);
 
 	//float y = 0.5f;
 	//for (int i = 0; i < numParticles; i++) {

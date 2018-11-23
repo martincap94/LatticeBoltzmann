@@ -1,5 +1,5 @@
 // Options: 2D, 3D
-LBM_type: 3D
+LBM_type: 2D
 
 VSync: 0
 

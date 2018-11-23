@@ -110,7 +110,7 @@
     <ClCompile Include="LBM3D.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OrbitCamera.cpp" />
-    <ClCompile Include="ParticleSystem.cpp" />
+    <CudaCompile Include="ParticleSystem.cpp" />
     <ClCompile Include="ShaderProgram.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -123,9 +123,9 @@
     <ClInclude Include="Grid3D.h" />
     <ClInclude Include="HeightMap.h" />
     <ClInclude Include="LatticeCollider.h" />
-    <ClInclude Include="Config.h" />
+    <ClCompile Include="Config.h" />
     <ClInclude Include="Grid2D.h" />
-    <ClInclude Include="LBM.h" />
+    <CudaCompile Include="LBM.h" />
     <ClInclude Include="LBM2D_1D_indices.h" />
     <ClInclude Include="LBM2D_reindexed.h" />
     <ClInclude Include="LBM2D.h" />

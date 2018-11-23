@@ -5,6 +5,8 @@
 class LBM {
 public:
 
+	int *d_numParticles;
+
 	LBM();
 	~LBM();
 

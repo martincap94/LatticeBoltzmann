@@ -24,6 +24,12 @@
     <CudaCompile Include="DataStructures.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
+    <CudaCompile Include="LBM.h">
+      <Filter>Header Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="ParticleSystem.cpp">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="glad.c">
@@ -68,9 +74,6 @@
     <ClCompile Include="HeightMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ParticleSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DirectionalLight.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -86,6 +89,9 @@
     <ClCompile Include="Grid.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Config.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LBM2D.h">
@@ -95,9 +101,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ShaderProgram.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LatticeCollider.h">
@@ -140,9 +143,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Camera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="LBM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Grid.h">

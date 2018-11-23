@@ -12,14 +12,14 @@ __device__ int getIdxKer(int x, int y, int z) {
 }
 
 
-__global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec3 *velocities) {
+__global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec3 *velocities, int *numParticles) {
 
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
 	idx += blockDim.x * blockDim.y * blockIdx.x;
 
 	glm::vec3 adjVelocities[8];
 
-	while (idx < NUM_PARTICLES) {
+	while (idx < *numParticles) {
 
 		float x = particleVertices[idx].x;
 		float y = particleVertices[idx].y;
@@ -75,14 +75,14 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec3 *
 }
 
 
-__global__ void moveParticlesKernel(glm::vec3 *particleVertices, glm::vec3 *velocities) {
+__global__ void moveParticlesKernel(glm::vec3 *particleVertices, glm::vec3 *velocities, int *numParticles) {
 
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
 	idx += blockDim.x * blockDim.y * blockIdx.x;
 
 	glm::vec3 adjVelocities[8];
 
-	while (idx < NUM_PARTICLES) {
+	while (idx < *numParticles) {
 
 		float x = particleVertices[idx].x;
 		float y = particleVertices[idx].y;
@@ -843,7 +843,9 @@ LBM3D_1D_indices::LBM3D_1D_indices(ParticleSystem * particleSystem, HeightMap *h
 	cudaMalloc((void**)&d_backLattice, sizeof(Node3D) * GRID_SIZE);
 	cudaMalloc((void**)&d_velocities, sizeof(glm::vec3) * GRID_SIZE);
 	cudaMalloc((void**)&d_testCollider, sizeof(bool) * GRID_SIZE);
-	cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * NUM_PARTICLES);
+	cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * particleSystem->numParticles);
+
+	d_numParticles = particleSystem->d_numParticles;
 
 	cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, particleSystem->vbo, cudaGraphicsMapFlagsWriteDiscard);
 
@@ -978,7 +980,7 @@ void LBM3D_1D_indices::doStepCUDA() {
 	cudaGraphicsResourceGetMappedPointer((void **)&dptr, &num_bytes, cuda_vbo_resource);
 	//printf("CUDA mapped VBO: May access %ld bytes\n", num_bytes);
 
-	moveParticlesKernelInterop << <gridDim, blockDim >> > (dptr, d_velocities);
+	moveParticlesKernelInterop << <gridDim, blockDim >> > (dptr, d_velocities, d_numParticles);
 
 	cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0);
 #else // USE_INTEROP - else
@@ -1290,7 +1292,7 @@ void LBM3D_1D_indices::collisionStep() {
 void LBM3D_1D_indices::moveParticles() {
 
 	glm::vec3 adjVelocities[8];
-	for (int i = 0; i < NUM_PARTICLES; i++) {
+	for (int i = 0; i < particleSystem->numParticles; i++) {
 
 		float x = particleVertices[i].x;
 		float y = particleVertices[i].y;

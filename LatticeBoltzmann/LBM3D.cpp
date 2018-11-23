@@ -378,7 +378,7 @@ void LBM3D::collisionStep() {
 void LBM3D::moveParticles() {
 
 	glm::vec3 adjVelocities[8];
-	for (int i = 0; i < NUM_PARTICLES; i++) {
+	for (int i = 0; i < particleSystem->numParticles; i++) {
 		float x = particleVertices[i].x;
 		float y = particleVertices[i].y;
 		float z = particleVertices[i].z;

@@ -64,6 +64,7 @@ Grid *grid;
 Camera *camera;
 
 int vsync = 0;
+int numParticles = 1000; // default value
 
 float deltaTime = 0.0f;
 float lastFrameTime;
@@ -128,7 +129,7 @@ int runApp() {
 
 
 
-	ParticleSystem particles(NUM_PARTICLES);
+	ParticleSystem particles(numParticles);
 
 	HeightMap heightMap(HEIGHTMAP_FILENAME, nullptr); // temporary fix, no need to load for 2D
 
@@ -393,6 +394,8 @@ void saveConfigParam(string param, string val) {
 		}
 	} else if (param == "VSync") {
 		vsync = stoi(val);
+	} else if (param == "num_particles") {
+		numParticles = stoi(val);
 	}
 
 

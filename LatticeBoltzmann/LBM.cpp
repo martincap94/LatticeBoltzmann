@@ -1,7 +1,6 @@
 #include "LBM.h"
 
 
-
 LBM::LBM() {
 }
 
