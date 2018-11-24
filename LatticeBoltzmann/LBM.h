@@ -11,12 +11,19 @@ public:
 	int latticeHeight;
 	int latticeDepth;
 
+	int latticeSize;
+
 	float tau = 0.52f;
 	float itau;
+	float nu;
+
+	string sceneFilename;
 
 	LBM();
-	LBM(glm::vec3 dimensions, float tau);
+	LBM(glm::vec3 dimensions, string sceneFilename, float tau);
 	~LBM();
+
+	virtual void initScene() = 0;
 
 	virtual void draw(ShaderProgram &shader) = 0;
 	virtual void doStep() = 0;

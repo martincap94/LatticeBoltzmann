@@ -8,7 +8,7 @@
 HeightMap::HeightMap() {
 }
 
-HeightMap::HeightMap(string filename, ShaderProgram *shader) : shader(shader) {
+HeightMap::HeightMap(string filename, int latticeHeight, ShaderProgram *shader) : shader(shader) {
 
 
 	if (filename.find(".ppm") == string::npos) {
@@ -55,7 +55,7 @@ HeightMap::HeightMap(string filename, ShaderProgram *shader) : shader(shader) {
 			sum += dummy;
 
 
-			data[x][z] = ((float)sum / (float)maxSum) * (float)(GRID_HEIGHT - 1);
+			data[x][z] = ((float)sum / (float)maxSum) * (float)(latticeHeight - 1);
 
 			//printf("x = %d, z = %d, data[x][z] = %f\n", x, z, data[x][z]);
 

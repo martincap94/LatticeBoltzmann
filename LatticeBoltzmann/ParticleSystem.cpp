@@ -7,64 +7,15 @@
 ParticleSystem::ParticleSystem() {
 }
 
-ParticleSystem::ParticleSystem(int numParticles) : numParticles(numParticles) {
-	particleVertices = new glm::vec3[numParticles];
+ParticleSystem::ParticleSystem(int numParticles, bool drawStreamlines) : numParticles(numParticles), drawStreamlines(drawStreamlines) {
+	particleVertices = new glm::vec3[numParticles]();
 
 
-	streamLines = new glm::vec3[numParticles * MAX_STREAMLINE_LENGTH];
 
 	cudaMalloc((void**)&d_numParticles, sizeof(int));
 
 	cudaMemcpy(d_numParticles, &numParticles, sizeof(int), cudaMemcpyHostToDevice);
 
-#ifdef RUN_LBM3D
-
-	// generate in the left wall
-	int particleCount = 0;
-	float x = 0.0f;
-	float y = 0.0f;
-	float z = 0.0f;
-	while (particleCount != numParticles) {
-		particleVertices[particleCount] = glm::vec3(x, y, z++);
-		// prefer depth instead of height
-		if (z >= GRID_DEPTH - 1) {
-			z = 0.0f;
-			y++;
-		}
-		if (y >= GRID_HEIGHT - 1) {
-			y = 0.0f;
-			z = 0.0f;
-			x++;
-		}
-		if (x >= GRID_WIDTH - 1) {
-			x = 0.5f;
-			y = 0.5f;
-			z = 0.5f;
-		}
-		particleCount++;
-	}
-
-#endif
-#ifdef RUN_LBM2D
-
-	int particleCount = 0;
-	int x = 0;
-	int y = 0;
-	float offset = 0.1f;
-	while (particleCount != numParticles) {
-		particleVertices[particleCount] = glm::vec3(x, y++, -1.0f);
-		if (y >= GRID_HEIGHT - 1) {
-			y = 0;
-			x++;
-		}
-		if (x >= GRID_WIDTH - 1) {
-			x = offset;
-			y = offset;
-			offset += 0.1f;
-		}
-		particleCount++;
-	}
-#endif
 
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
@@ -78,15 +29,20 @@ ParticleSystem::ParticleSystem(int numParticles) : numParticles(numParticles) {
 
 	glBindVertexArray(0);
 
-	glGenVertexArrays(1, &streamLinesVAO);
-	glBindVertexArray(streamLinesVAO);
-	glGenBuffers(1, &streamLinesVBO);
-	glBindBuffer(GL_ARRAY_BUFFER, streamLinesVBO);
 
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+	if (drawStreamlines) {
+		streamLines = new glm::vec3[numParticles * MAX_STREAMLINE_LENGTH];
 
-	glBindVertexArray(0);
+		glGenVertexArrays(1, &streamLinesVAO);
+		glBindVertexArray(streamLinesVAO);
+		glGenBuffers(1, &streamLinesVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, streamLinesVBO);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+
+		glBindVertexArray(0);
+	}
 
 
 
@@ -95,7 +51,10 @@ ParticleSystem::ParticleSystem(int numParticles) : numParticles(numParticles) {
 
 ParticleSystem::~ParticleSystem() {
 	delete[] particleVertices;
-	delete[] streamLines;
+
+	if (streamLines != nullptr) {
+		delete[] streamLines;
+	}
 }
 
 void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
@@ -114,7 +73,7 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 
 	glDrawArrays(GL_POINTS, 0, numParticles);
 
-	if (!useCUDA) {
+	if (drawStreamlines) {
 
 		glPointSize(1.0f);
 		shader.setVec4("color", glm::vec4(0.0f, 0.4f, 1.0f, 1.0f));
@@ -130,20 +89,58 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 
 }
 
-void ParticleSystem::initParticlePositions(HeightMap *heightMap) {
+void ParticleSystem::initParticlePositions(int width, int height) {
+	int particleCount = 0;
+	int x = 0;
+	int y = 0;
+	float offset = 0.1f;
+	while (particleCount != numParticles) {
+		particleVertices[particleCount] = glm::vec3(x, y++, -1.0f);
+		if (y >= height - 1) {
+			y = 0;
+			x++;
+		}
+		if (x >= width - 1) {
+			x = offset;
+			y = offset;
+			offset += 0.1f;
+		}
+		particleCount++;
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-	//particleVertices[0] = glm::vec3(-10.0f, -10.0f, -10.0f);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles, &particleVertices[0], GL_DYNAMIC_DRAW);
+}
 
-	//int idx = 0;
-	//for (float z = 0.0f; z < GRID_DEPTH; z += 1.0f) {
-	//	for (float y = 0.0f; y < GRID_HEIGHT; y += 1.0f) {
-	//		if (y > heightMap->data[0][(int)z]) {
-	//			particleVertices[idx++] = glm::vec3(0.0f, y, z);
-	//			if (idx >= numParticles) {
-	//				break;
-	//			}
-	//		}
-	//	}
-	//}
+void ParticleSystem::initParticlePositions(int width, int height, int depth) {
 
+
+	// generate in the left wall
+	int particleCount = 0;
+	float x = 0.0f;
+	float y = 0.0f;
+	float z = 0.0f;
+	while (particleCount != numParticles) {
+		// prefer depth instead of height
+		if (z >= depth - 1) {
+			z = 0.0f;
+			y++;
+		}
+		if (y >= height - 1) {
+			y = 0.0f;
+			z = 0.0f;
+			x++;
+		}
+		if (x >= width - 1) {
+			x = 0.5f;
+			y = 0.5f;
+			z = 0.5f;
+		}
+		particleVertices[particleCount] = glm::vec3(x, y, z++);
+
+		particleCount++;
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles, &particleVertices[0], GL_DYNAMIC_DRAW);
 }

@@ -35,6 +35,10 @@ public:
 	float pitch;
 	float roll;
 
+	int latticeWidth;
+	int latticeHeight;
+	int latticeDepth;
+
 	Camera();
 	Camera(glm::vec3 position, glm::vec3 up = WORLD_UP, float yaw = -90.0f, float pitch = 0.0f);
 	~Camera();
@@ -45,6 +49,7 @@ public:
 	virtual void setView(CameraView camView);
 	virtual void printInfo();
 
+	void setLatticeDimensions(int latticeWidth, int latticeHeight, int latticeDepth);
 
 protected:
 

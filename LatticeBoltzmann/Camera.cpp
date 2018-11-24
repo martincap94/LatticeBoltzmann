@@ -25,3 +25,9 @@ void Camera::setView(CameraView camView) {
 void Camera::printInfo() {
 	cout << "Camera position: " << glm::to_string(position) << endl;
 }
+
+void Camera::setLatticeDimensions(int latticeWidth, int latticeHeight, int latticeDepth) {
+	this->latticeWidth = latticeWidth;
+	this->latticeHeight = latticeHeight;
+	this->latticeDepth = latticeDepth;
+}

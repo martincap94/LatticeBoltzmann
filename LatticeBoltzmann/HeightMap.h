@@ -23,7 +23,7 @@ public:
 
 
 	HeightMap();
-	HeightMap(string filename, ShaderProgram *shader);
+	HeightMap(string filename, int latticeHeight, ShaderProgram *shader);
 	~HeightMap();
 
 	void draw();

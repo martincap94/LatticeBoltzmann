@@ -112,6 +112,7 @@ public:
 	vector<glm::vec3> colliderVertices;
 
 	HeightMap *testHM;
+	float *d_heightMap;
 
 
 	struct cudaGraphicsResource *cuda_vbo_resource;
@@ -119,8 +120,10 @@ public:
 
 
 	LBM3D_1D_indices();
-	LBM3D_1D_indices(glm::vec3 dim, float tau, ParticleSystem *particleSystem, HeightMap *heightMap);
+	LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem);
 	~LBM3D_1D_indices();
+
+	virtual void initScene();
 
 	virtual void draw(ShaderProgram &shader);
 
@@ -141,7 +144,7 @@ private:
 	int respawnZ = 0;
 
 	int getIdx(int x, int y, int z) {
-		return (x + GRID_WIDTH * (y + GRID_HEIGHT * z));
+		return (x + latticeWidth * (y + latticeHeight * z));
 	}
 
 	GLuint colliderVAO;

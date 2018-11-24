@@ -13,6 +13,9 @@ public:
 	int *d_numParticles;
 	int maxNumParticles = 10000;
 
+	bool drawStreamlines = false;
+
+
 
 	glm::vec3 *particleVertices;
 	//vector<glm::vec3> particleVerticesVector;
@@ -20,11 +23,13 @@ public:
 	glm::vec3 *streamLines;
 
 	ParticleSystem();
-	ParticleSystem(int numParticles);
+	ParticleSystem(int numParticles, bool drawStreamlines);
 	~ParticleSystem();
 
 	void draw(const ShaderProgram &shader, bool useCUDA);
-	void initParticlePositions(HeightMap *heightMap);
+	void initParticlePositions(int width, int height);
+	void initParticlePositions(int width, int height, int depth);
+
 
 	GLuint vbo;
 

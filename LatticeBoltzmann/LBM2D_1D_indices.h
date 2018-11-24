@@ -30,6 +30,20 @@ const glm::vec3 vTopLeft = glm::vec3(-1.0f, 1.0f, 0.0f);
 const glm::vec3 vBottomLeft = glm::vec3(-1.0f, -1.0f, 0.0f);
 const glm::vec3 vBottomRight = glm::vec3(1.0f, -1.0f, 0.0f);
 
+const glm::vec3 directionVetors[9] = {
+	glm::vec3(0.0f, 0.0f, 0.0f),
+	glm::vec3(1.0f, 0.0f, 0.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f),
+	glm::vec3(-1.0f, 0.0f, 0.0f),
+	glm::vec3(0.0f, -1.0f, 0.0f),
+	glm::vec3(1.0f, 1.0f, 0.0f),
+	glm::vec3(-1.0f, 1.0f, 0.0f),
+	glm::vec3(-1.0f, -1.0f, 0.0f),
+	glm::vec3(1.0f, -1.0f, 0.0f)
+};
+
+
+
 enum EDirection {
 	DIR_MIDDLE = 0,
 	DIR_RIGHT,
@@ -82,8 +96,10 @@ public:
 	vector<glm::vec3> particleArrows;
 
 	LBM2D_1D_indices();
-	LBM2D_1D_indices(glm::vec3 dim, float tau, ParticleSystem *particleSystem);
+	LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem);
 	~LBM2D_1D_indices();
+
+	virtual void initScene();
 
 	virtual void draw(ShaderProgram &shader);
 
@@ -94,7 +110,6 @@ public:
 	virtual void streamingStep();
 	virtual void collisionStep();
 	void collisionStepStreamlined();
-	void collisionStepCUDA();
 
 	virtual void moveParticles();
 	virtual void updateInlets();
@@ -123,7 +138,7 @@ private:
 	void initTestCollider();
 
 	int getIdx(int x, int y) {
-		return x + y * GRID_WIDTH;
+		return x + y * latticeWidth;
 	}
 
 

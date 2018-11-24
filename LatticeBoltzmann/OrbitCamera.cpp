@@ -6,7 +6,7 @@
 OrbitCamera::OrbitCamera() {
 }
 
-OrbitCamera::OrbitCamera(glm::vec3 position, glm::vec3 up, float yaw, float pitch, glm::vec3 focusPoint) : Camera(position, up, yaw, pitch), focusPoint(focusPoint) {
+OrbitCamera::OrbitCamera(glm::vec3 position, glm::vec3 up, float yaw, float pitch, glm::vec3 focusPoint) : Camera(position, up, yaw, pitch), focusPoint(focusPoint), initFocusPoint(focusPoint) {
 	updateCameraVectors();
 }
 
@@ -80,19 +80,19 @@ void OrbitCamera::processMouseScroll(float yoffset) {
 void OrbitCamera::setView(CameraView camView) {
 	switch (camView) {
 		case VIEW_FRONT:
-			position = glm::vec3(GRID_WIDTH / 2.0f, GRID_HEIGHT / 2.0f, GRID_DEPTH * 2.0f);
+			position = glm::vec3(latticeWidth / 2.0f, latticeHeight / 2.0f, latticeDepth * 2.0f);
 			front = glm::normalize(initFocusPoint - position);
 			right = glm::vec3(1.0f, 0.0f, 0.0f);
 			up = glm::normalize(glm::cross(right, front));
 			break;
 		case VIEW_SIDE:
-			position = glm::vec3(GRID_WIDTH * 2.0f, GRID_HEIGHT / 2.0f, GRID_DEPTH / 2.0f);
+			position = glm::vec3(latticeWidth * 2.0f, latticeHeight / 2.0f, latticeDepth / 2.0f);
 			front = glm::normalize(initFocusPoint - position);
 			right = glm::vec3(0.0f, 0.0f, -1.0f);
 			up = glm::normalize(glm::cross(right, front));
 			break;
 		case VIEW_TOP:
-			position = glm::vec3(GRID_WIDTH / 2.0f, GRID_HEIGHT * 2.0f, GRID_DEPTH / 2.0f);
+			position = glm::vec3(latticeWidth / 2.0f, latticeHeight * 2.0f, latticeDepth / 2.0f);
 			front = glm::normalize(initFocusPoint - position);
 			right = glm::vec3(1.0f, 0.0f, 0.0f);
 			up = glm::normalize(glm::cross(right, front));

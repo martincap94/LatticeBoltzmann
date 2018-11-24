@@ -10,8 +10,8 @@
 #define COLLIDER_FILENAME "512x256_01.ppm"
 #define HEIGHTMAP_FILENAME "60x40_02.ppm"
 
-//#define RUN_LBM3D
-#define RUN_LBM2D
+#define RUN_LBM3D
+//#define RUN_LBM2D
 #define USE_REINDEXED_LBM2D
 #define USE_REINDEXED_LBM3D
 
@@ -23,9 +23,9 @@
 
 
 #ifdef RUN_LBM3D
-#define GRID_WIDTH 60
-#define GRID_HEIGHT 60
-#define GRID_DEPTH 40
+#define GRID_WIDTH 189
+#define GRID_HEIGHT 123
+#define GRID_DEPTH 41
 #endif
 #ifdef RUN_LBM2D
 #define GRID_WIDTH 512
@@ -50,5 +50,8 @@
 
 #define TAU 0.55f
 #define ITAU (1.0f / TAU)
+
+//#define SUBGRID_EXPERIMENTAL
+#define SMAG_C 0.3f
 
 using namespace std;

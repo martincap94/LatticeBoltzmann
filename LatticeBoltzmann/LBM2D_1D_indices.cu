@@ -9,8 +9,15 @@
 
 //#define BLOCK_DIM 512
 
+
+__constant__ int d_latticeWidth;
+__constant__ int d_latticeHeight;
+__constant__ float d_tau;
+__constant__ float d_itau;
+
+
 __device__ int getIdxKernel(int x, int y) {
-	return x + y * GRID_WIDTH;
+	return x + y * d_latticeWidth;
 }
 
 
@@ -45,7 +52,7 @@ __global__ void moveParticlesKernel(glm::vec3 *particleVertices, glm::vec2 *velo
 		glm::vec2 finalVelocity = bottomVelocity * verticalRatio + topVelocity * (1.0f - verticalRatio);
 
 		particleVertices[idx] += glm::vec3(finalVelocity, 0.0f);
-	
+
 		idx += blockDim.x * gridDim.x;
 
 
@@ -86,17 +93,17 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *
 		particleVertices[idx].y += finalVelocity.y;
 
 
-		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= GRID_WIDTH - 1 ||
-			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= GRID_HEIGHT - 1) {
+		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
+			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1) {
 #ifdef MIRROR_SIDES
-			if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= GRID_WIDTH - 1) {
+			if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1) {
 				//particleVertices[idx] = glm::vec3(0, respawnIdx++, 0.0f);
 				particleVertices[idx].x = 0.0f;
-				particleVertices[idx].z = 0.0f;
+				//particleVertices[idx].z = 0.0f;
 			} else {
-				//particleVertices[i] = glm::vec3(particleVertices[i].x, (int)(particleVertices[i].y + GRID_HEIGHT - 1) % (GRID_HEIGHT - 1), 0.0f);
-				particleVertices[idx].y = (float)((int)(particleVertices[idx].y + GRID_HEIGHT - 1) % (GRID_HEIGHT - 1));
-				particleVertices[idx].z = 0.0f;
+				//particleVertices[i] = glm::vec3(particleVertices[i].x, (int)(particleVertices[i].y + d_latticeHeight - 1) % (d_latticeHeight - 1), 0.0f);
+				particleVertices[idx].y = (float)((int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1));
+				//particleVertices[idx].z = 0.0f;
 			}
 #else
 			//particleVertices[i] = glm::vec3(0, respawnIdx++, 0.0f);
@@ -104,7 +111,7 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *
 			particleVertices[idx].z = 0.0f;
 #endif
 		}
-		
+
 		idx += blockDim.x * gridDim.x;
 
 
@@ -115,7 +122,7 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *
 
 __global__ void clearBackLatticeKernel(Node *backLattice) {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
-	if (idx < GRID_WIDTH * GRID_HEIGHT) {
+	if (idx < d_latticeWidth * d_latticeHeight) {
 		for (int i = 0; i < 9; i++) {
 			backLattice[idx].adj[i] = 0.0f;
 		}
@@ -126,10 +133,10 @@ __global__ void streamingStepKernel(Node *backLattice, Node *frontLattice) {
 
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
 
-	if (idx < GRID_WIDTH * GRID_HEIGHT) {
+	if (idx < d_latticeWidth * d_latticeHeight) {
 
-		int x = idx % GRID_WIDTH;
-		int y = (idx / GRID_WIDTH) % GRID_HEIGHT;
+		int x = idx % d_latticeWidth;
+		int y = (idx / d_latticeWidth) % d_latticeHeight;
 
 		backLattice[idx].adj[DIR_MIDDLE] += frontLattice[idx].adj[DIR_MIDDLE];
 
@@ -142,14 +149,14 @@ __global__ void streamingStepKernel(Node *backLattice, Node *frontLattice) {
 		left = x - 1;
 		top = y + 1;
 		bottom = y - 1;
-		if (right > GRID_WIDTH - 1) {
-			right = GRID_WIDTH - 1;
+		if (right > d_latticeWidth - 1) {
+			right = d_latticeWidth - 1;
 		}
 		if (left < 0) {
 			left = 0;
 		}
-		if (top > GRID_HEIGHT - 1) {
-			top = GRID_HEIGHT - 1;
+		if (top > d_latticeHeight - 1) {
+			top = d_latticeHeight - 1;
 		}
 		if (bottom < 0) {
 			bottom = 0;
@@ -257,9 +264,9 @@ __global__ void updateInletsKernel(Node *lattice) {
 
 
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
-	int x = idx % GRID_WIDTH;
+	int x = idx % d_latticeWidth;
 
-	if (x == 0 && idx < GRID_WIDTH * GRID_HEIGHT) {
+	if (x == 0 && idx < d_latticeWidth * d_latticeHeight) {
 
 		lattice[idx].adj[DIR_MIDDLE] = middleEq;
 		lattice[idx].adj[DIR_RIGHT] = rightEq;
@@ -286,7 +293,7 @@ __global__ void updateCollidersKernel(Node *backLattice, bool *tCol) {
 
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
 
-	if (idx < GRID_WIDTH * GRID_HEIGHT) {
+	if (idx < d_latticeWidth * d_latticeHeight) {
 		if (tCol[idx]) {
 
 			float right = backLattice[idx].adj[DIR_RIGHT];
@@ -322,7 +329,7 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 	__shared__ Node cache[BLOCK_DIM];
 
 
-	if (idx < GRID_WIDTH * GRID_HEIGHT) {
+	if (idx < d_latticeWidth * d_latticeHeight) {
 
 		cache[cacheIdx] = backLattice[idx];
 
@@ -416,15 +423,15 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 		float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
-		cache[cacheIdx].adj[DIR_MIDDLE] -= ITAU * (cache[cacheIdx].adj[DIR_MIDDLE] - middleEq);
-		cache[cacheIdx].adj[DIR_RIGHT] -= ITAU * (cache[cacheIdx].adj[DIR_RIGHT] - rightEq);
-		cache[cacheIdx].adj[DIR_TOP] -= ITAU * (cache[cacheIdx].adj[DIR_TOP] - topEq);
-		cache[cacheIdx].adj[DIR_LEFT] -= ITAU * (cache[cacheIdx].adj[DIR_LEFT] - leftEq);
-		cache[cacheIdx].adj[DIR_BOTTOM] -= ITAU * (cache[cacheIdx].adj[DIR_BOTTOM] - bottomEq);
-		cache[cacheIdx].adj[DIR_TOP_RIGHT] -= ITAU * (cache[cacheIdx].adj[DIR_TOP_RIGHT] - topRightEq);
-		cache[cacheIdx].adj[DIR_TOP_LEFT] -= ITAU * (cache[cacheIdx].adj[DIR_TOP_LEFT] - topLeftEq);
-		cache[cacheIdx].adj[DIR_BOTTOM_LEFT] -= ITAU * (cache[cacheIdx].adj[DIR_BOTTOM_LEFT] - bottomLeftEq);
-		cache[cacheIdx].adj[DIR_BOTTOM_RIGHT] -= ITAU * (cache[cacheIdx].adj[DIR_BOTTOM_RIGHT] - bottomRightEq);
+		cache[cacheIdx].adj[DIR_MIDDLE] -= d_itau * (cache[cacheIdx].adj[DIR_MIDDLE] - middleEq);
+		cache[cacheIdx].adj[DIR_RIGHT] -= d_itau * (cache[cacheIdx].adj[DIR_RIGHT] - rightEq);
+		cache[cacheIdx].adj[DIR_TOP] -= d_itau * (cache[cacheIdx].adj[DIR_TOP] - topEq);
+		cache[cacheIdx].adj[DIR_LEFT] -= d_itau * (cache[cacheIdx].adj[DIR_LEFT] - leftEq);
+		cache[cacheIdx].adj[DIR_BOTTOM] -= d_itau * (cache[cacheIdx].adj[DIR_BOTTOM] - bottomEq);
+		cache[cacheIdx].adj[DIR_TOP_RIGHT] -= d_itau * (cache[cacheIdx].adj[DIR_TOP_RIGHT] - topRightEq);
+		cache[cacheIdx].adj[DIR_TOP_LEFT] -= d_itau * (cache[cacheIdx].adj[DIR_TOP_LEFT] - topLeftEq);
+		cache[cacheIdx].adj[DIR_BOTTOM_LEFT] -= d_itau * (cache[cacheIdx].adj[DIR_BOTTOM_LEFT] - bottomLeftEq);
+		cache[cacheIdx].adj[DIR_BOTTOM_RIGHT] -= d_itau * (cache[cacheIdx].adj[DIR_BOTTOM_RIGHT] - bottomRightEq);
 
 
 		for (int i = 0; i < 9; i++) {
@@ -442,54 +449,44 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 
 
 
-void LBM2D_1D_indices::collisionStepCUDA() {
 
-	cudaMemcpy(d_backLattice, backLattice, sizeof(Node) * GRID_WIDTH * GRID_HEIGHT, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * GRID_WIDTH * GRID_HEIGHT, cudaMemcpyHostToDevice);
-
-	collisionStepKernel << <(int)((GRID_WIDTH * GRID_HEIGHT) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_velocities);
-
-	//cudaDeviceSynchronize();
-	cudaMemcpy(backLattice, d_backLattice, sizeof(Node) * GRID_WIDTH * GRID_HEIGHT, cudaMemcpyDeviceToHost);
-	cudaMemcpy(velocities, d_velocities, sizeof(glm::vec2) * GRID_WIDTH * GRID_HEIGHT, cudaMemcpyDeviceToHost);
-
-	cudaDeviceSynchronize();
-
-}
 
 
 LBM2D_1D_indices::LBM2D_1D_indices() {
 }
 
-LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, float tau, ParticleSystem *particleSystem) : LBM(dim, tau), particleSystem(particleSystem) {
+LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem) : LBM(dim, sceneFilename, tau), particleSystem(particleSystem) {
 
-	particleVertices = particleSystem->particleVertices;
-	frontLattice = new Node[GRID_WIDTH * GRID_HEIGHT]();
-	backLattice = new Node[GRID_WIDTH * GRID_HEIGHT]();
-	velocities = new glm::vec2[GRID_WIDTH * GRID_HEIGHT]();
+	initScene();
 
-	//cudaMallocPitch((void**)&d_frontLattice, &frontLatticePitch, GRID_WIDTH, GRID_HEIGHT);
-	cudaMalloc((void**)&d_frontLattice, sizeof(Node) * GRID_WIDTH * GRID_HEIGHT);
-	cudaMalloc((void**)&d_backLattice, sizeof(Node) * GRID_WIDTH * GRID_HEIGHT);
-	cudaMalloc((void**)&d_velocities, sizeof(glm::vec2) * GRID_WIDTH * GRID_HEIGHT);
-	cudaMalloc((void**)&d_tCol, sizeof(bool) * GRID_WIDTH * GRID_HEIGHT);
-	cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * particleSystem->numParticles);
 
-	d_numParticles = particleSystem->d_numParticles;
+	frontLattice = new Node[latticeWidth * latticeHeight]();
+	backLattice = new Node[latticeWidth * latticeHeight]();
+	velocities = new glm::vec2[latticeWidth * latticeHeight]();
+
+	//cudaMallocPitch((void**)&d_frontLattice, &frontLatticePitch, latticeWidth, latticeHeight);
+	cudaMalloc((void**)&d_frontLattice, sizeof(Node) * latticeWidth * latticeHeight);
+	cudaMalloc((void**)&d_backLattice, sizeof(Node) * latticeWidth * latticeHeight);
+	cudaMalloc((void**)&d_velocities, sizeof(glm::vec2) * latticeWidth * latticeHeight);
+
+	cudaMemcpyToSymbol(d_latticeWidth, &latticeWidth, sizeof(int));
+	cudaMemcpyToSymbol(d_latticeHeight, &latticeHeight, sizeof(int));
+	cudaMemcpyToSymbol(d_tau, &tau, sizeof(float));
+	cudaMemcpyToSymbol(d_itau, &itau, sizeof(float));
+
 
 
 	cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, particleSystem->vbo, cudaGraphicsMapFlagsWriteDiscard);
 
-	initTestCollider();
 
 	initBuffers();
 	initLattice();
 	//updateInlets(frontLattice);
 
 #ifdef USE_CUDA
-	cudaMemcpy(d_backLattice, backLattice, sizeof(Node) * GRID_WIDTH * GRID_HEIGHT, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * GRID_WIDTH * GRID_HEIGHT, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * GRID_WIDTH * GRID_HEIGHT, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_backLattice, backLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 #endif
 
 }
@@ -509,6 +506,28 @@ LBM2D_1D_indices::~LBM2D_1D_indices() {
 	cudaFree(d_velocities);
 
 	cudaGraphicsUnregisterResource(cuda_vbo_resource);
+
+}
+
+void LBM2D_1D_indices::initScene() {
+	tCol = new LatticeCollider(sceneFilename);
+	latticeWidth = tCol->width;
+	latticeHeight = tCol->height;
+	latticeDepth = 1;
+	latticeSize = latticeWidth * latticeHeight;
+
+	cudaMalloc((void**)&d_tCol, sizeof(bool) * latticeWidth * latticeHeight);
+	cudaMemcpy(d_tCol, &tCol->area[0], sizeof(bool) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+
+
+	particleVertices = particleSystem->particleVertices;
+	d_numParticles = particleSystem->d_numParticles;
+
+	particleSystem->initParticlePositions(latticeWidth, latticeHeight);
+
+
+	cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * particleSystem->numParticles);
+
 
 }
 
@@ -560,8 +579,9 @@ void LBM2D_1D_indices::doStep() {
 	updateInlets();
 	streamingStep();
 	updateColliders();
-	//updateCollidersAlt();
+
 	collisionStep();
+
 	//collisionStepStreamlined();
 
 	moveParticles();
@@ -575,19 +595,19 @@ void LBM2D_1D_indices::doStepCUDA() {
 
 
 	// ============================================= clear back lattice CUDA
-	clearBackLatticeKernel << <(int)((GRID_WIDTH * GRID_HEIGHT) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice);
+	clearBackLatticeKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice);
 
 	// ============================================= update inlets CUDA
-	updateInletsKernel << <(int)((GRID_WIDTH * GRID_HEIGHT) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice);
+	updateInletsKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice);
 
 	// ============================================= streaming step CUDA
-	streamingStepKernel << <(int)((GRID_WIDTH * GRID_HEIGHT) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_frontLattice);
+	streamingStepKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_frontLattice);
 
 	// ============================================= update colliders CUDA
-	updateCollidersKernel << <(int)((GRID_WIDTH * GRID_HEIGHT) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_tCol);
+	updateCollidersKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_tCol);
 
 	// ============================================= collision step CUDA
-	collisionStepKernel << <(int)((GRID_WIDTH * GRID_HEIGHT) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_velocities);
+	collisionStepKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_velocities);
 
 	// ============================================= move particles CUDA - different respawn from CPU !!!
 
@@ -598,7 +618,7 @@ void LBM2D_1D_indices::doStepCUDA() {
 	cudaGraphicsResourceGetMappedPointer((void **)&dptr, &num_bytes, cuda_vbo_resource);
 	//printf("CUDA mapped VBO: May access %ld bytes\n", num_bytes);
 
-	moveParticlesKernelInterop << <(int)((GRID_WIDTH * GRID_HEIGHT) / BLOCK_DIM) + 1, BLOCK_DIM >> > (dptr, d_velocities, d_numParticles);
+	moveParticlesKernelInterop << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (dptr, d_velocities, d_numParticles);
 
 	cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0);
 #else // USE_INTEROP - else
@@ -608,26 +628,26 @@ void LBM2D_1D_indices::doStepCUDA() {
 
 	cudaMemcpy(d_particleVertices, particleVertices, sizeof(glm::vec3) * NUM_PARTICLES, cudaMemcpyHostToDevice);
 
-	moveParticlesKernel << <(int)((GRID_WIDTH * GRID_HEIGHT) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_particleVertices, d_velocities);
+	moveParticlesKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_particleVertices, d_velocities);
 
 	cudaMemcpy(particleVertices, d_particleVertices, sizeof(glm::vec3) * NUM_PARTICLES, cudaMemcpyDeviceToHost);
 
 	for (int i = 0; i < NUM_PARTICLES; i++) {
 
-		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= GRID_WIDTH - 1 ||
-			particleVertices[i].y <= 0.0f || particleVertices[i].y >= GRID_HEIGHT - 1) {
+		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
+			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1) {
 #ifdef MIRROR_SIDES
-			if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= GRID_WIDTH - 1) {
+			if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
 				particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
-				if (respawnIndex >= GRID_HEIGHT - 1) {
+				if (respawnIndex >= latticeHeight - 1) {
 					respawnIndex = 0;
 				}
 			} else {
-				particleVertices[i] = glm::vec3(particleVertices[i].x, (int)(particleVertices[i].y + GRID_HEIGHT - 1) % (GRID_HEIGHT - 1), 0.0f);
+				particleVertices[i] = glm::vec3(particleVertices[i].x, (int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1), 0.0f);
 			}
 #else
 			particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
-			if (respawnIndex >= GRID_HEIGHT - 1) {
+			if (respawnIndex >= latticeHeight - 1) {
 				respawnIndex = 0;
 			}
 #endif
@@ -791,6 +811,97 @@ void LBM2D_1D_indices::collisionStep() {
 			secondTerm = 4.5f * dotProd * dotProd;
 			float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
+#ifdef SUBGRID_EXPERIMENTAL
+			// SUBGRID MODEL
+
+			float middleTensor;
+			float rightTensor;
+			float topTensor;
+			float leftTensor;
+			float bottomTensor;
+			float topRightTensor;
+			float topLeftTensor;
+			float bottomLeftTensor;
+			float bottomRightTensor;
+
+			float pi[9];
+
+			/*float sum = 0.0f;
+			for (int i = 0; i < 9; i++) {
+				sum += glm::dot(directionVetors[i], directionVetors[i]);
+			}*/
+
+			float sum = 0.0f;
+			middleTensor = sum * (backLattice[idx].adj[DIR_MIDDLE] - middleEq);
+
+			sum = 0.0f;
+			for (int i = 0; i < 9; i++) {
+				sum += glm::dot(directionVetors[1], directionVetors[1]);
+			}
+			rightTensor = sum * (backLattice[idx].adj[DIR_RIGHT] - rightEq);
+
+			sum = 0.0f;
+			for (int i = 0; i < 9; i++) {
+				sum += glm::dot(directionVetors[2], directionVetors[2]);
+			}
+			topTensor = sum * (backLattice[idx].adj[DIR_TOP] - topEq);
+
+			sum = 0.0f;
+			for (int i = 0; i < 9; i++) {
+				sum += glm::dot(directionVetors[3], directionVetors[3]);
+			}
+			leftTensor = sum * (backLattice[idx].adj[DIR_LEFT] - leftEq);
+
+			sum = 0.0f;
+			for (int i = 0; i < 9; i++) {
+				sum += glm::dot(directionVetors[4], directionVetors[4]);
+			}
+			bottomTensor = sum * (backLattice[idx].adj[DIR_BOTTOM] - bottomEq);
+
+			sum = 0.0f;
+			for (int i = 0; i < 9; i++) {
+				sum += glm::dot(directionVetors[5], directionVetors[5]);
+			}
+			topRightTensor = sum * (backLattice[idx].adj[DIR_TOP_RIGHT] - topRightEq);
+
+			sum = 0.0f;
+			for (int i = 0; i < 9; i++) {
+				sum += glm::dot(directionVetors[6], directionVetors[6]);
+			}
+			topLeftTensor = sum * (backLattice[idx].adj[DIR_TOP_LEFT] - topLeftEq);
+
+			sum = 0.0f;
+			for (int i = 0; i < 9; i++) {
+				sum += glm::dot(directionVetors[7], directionVetors[7]);
+			}
+			bottomLeftTensor = sum * (backLattice[idx].adj[DIR_BOTTOM_LEFT] - bottomLeftEq);
+
+			sum = 0.0f;
+			for (int i = 0; i < 9; i++) {
+				sum += glm::dot(directionVetors[8], directionVetors[8]);
+			}
+			bottomRightTensor = sum * (backLattice[idx].adj[DIR_BOTTOM_RIGHT] - bottomRightEq);
+
+
+
+			sum = 0.0f;
+			sum += middleTensor * middleTensor;
+			sum += rightTensor * rightTensor;
+			sum += topTensor * topTensor;
+			sum += leftTensor * leftTensor;
+			sum += bottomTensor * bottomTensor;
+			sum += topRightTensor * topRightTensor;
+			sum += topLeftTensor * topLeftTensor;
+			sum += bottomLeftTensor * bottomLeftTensor;
+			sum += bottomRightTensor * bottomRightTensor;
+
+			float S = (-nu + sqrtf(nu * nu + 18.0f * SMAG_C * sqrtf(sum))) / (6.0f * SMAG_C * SMAG_C);
+
+			tau = 3.0f * (nu + SMAG_C * SMAG_C * S) + 0.5f;
+			itau = 1.0f / tau;
+			//cout << "TAU = " << tau << endl;
+#endif
+
 			backLattice[idx].adj[DIR_MIDDLE] -= itau * (backLattice[idx].adj[DIR_MIDDLE] - middleEq);
 			backLattice[idx].adj[DIR_RIGHT] -= itau * (backLattice[idx].adj[DIR_RIGHT] - rightEq);
 			backLattice[idx].adj[DIR_TOP] -= itau * (backLattice[idx].adj[DIR_TOP] - topEq);
@@ -858,6 +969,7 @@ void LBM2D_1D_indices::collisionStepStreamlined() {
 			float bottomRightEq = leftTermDiagonal * (1.0f + 3.0f * (macroVelocity.x - macroVelocity.y) +
 													  4.5f * (macroVelocity.x - macroVelocity.y) * (macroVelocity.x - macroVelocity.y) - thirdTerm);
 
+
 			backLattice[idx].adj[DIR_MIDDLE] -= itau * (backLattice[idx].adj[DIR_MIDDLE] - middleEq);
 			backLattice[idx].adj[DIR_RIGHT] -= itau * (backLattice[idx].adj[DIR_RIGHT] - rightEq);
 			backLattice[idx].adj[DIR_TOP] -= itau * (backLattice[idx].adj[DIR_TOP] - topEq);
@@ -919,8 +1031,9 @@ void LBM2D_1D_indices::moveParticles() {
 		//	particleSystem->streamLines[i].pop_front();
 		//}
 		//particleSystem->streamLines[i].push_back(particleVertices[i]);
-		particleSystem->streamLines[i * MAX_STREAMLINE_LENGTH + streamLineCounter] = particleVertices[i];
-
+		if (particleSystem->drawStreamlines) {
+			particleSystem->streamLines[i * MAX_STREAMLINE_LENGTH + streamLineCounter] = particleVertices[i];
+		}
 
 		particleVertices[i] += glm::vec3(finalVelocity, 0.0f);
 #ifdef DRAW_PARTICLE_VELOCITY_ARROWS
@@ -947,8 +1060,10 @@ void LBM2D_1D_indices::moveParticles() {
 				respawnIndex = 0;
 			}
 #endif
-			for (int k = 0; k < MAX_STREAMLINE_LENGTH; k++) {
-				particleSystem->streamLines[i * MAX_STREAMLINE_LENGTH + k] = particleVertices[i];
+			if (particleSystem->drawStreamlines) {
+				for (int k = 0; k < MAX_STREAMLINE_LENGTH; k++) {
+					particleSystem->streamLines[i * MAX_STREAMLINE_LENGTH + k] = particleVertices[i];
+				}
 			}
 
 		}
@@ -1269,7 +1384,7 @@ void LBM2D_1D_indices::initLattice() {
 }
 
 void LBM2D_1D_indices::initTestCollider() {
-	tCol = new LatticeCollider(COLLIDER_FILENAME);
+	tCol = new LatticeCollider(sceneFilename);
 
 	cudaMemcpy(d_tCol, &tCol->area[0], sizeof(bool) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 

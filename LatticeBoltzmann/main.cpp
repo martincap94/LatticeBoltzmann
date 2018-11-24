@@ -35,6 +35,8 @@
 #include "DirectionalLight.h"
 #include "Grid.h"
 
+//#include <vld.h>
+
 int runApp();
 void processInput(GLFWwindow* window);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -77,6 +79,8 @@ int latticeHeight = 100;
 int latticeDepth = 100;
 
 float tau = 0.52f;
+
+bool drawStreamlines = false;
 
 
 
@@ -133,9 +137,9 @@ int runApp() {
 
 
 
-	ParticleSystem particles(numParticles);
+	ParticleSystem particles(numParticles, drawStreamlines);
 
-	HeightMap heightMap(HEIGHTMAP_FILENAME, nullptr); // temporary fix, no need to load for 2D
+	//HeightMap heightMap(HEIGHTMAP_FILENAME, nullptr); // temporary fix, no need to load for 2D
 	//HeightMap heightMap(sceneFilename, nullptr); // temporary fix, no need to load for 2D
 
 	float projWidth;
@@ -145,8 +149,13 @@ int runApp() {
 	switch (lbmType) {
 		case LBM2D:
 			printf("LBM2D SETUP...\n");
-			lbm = new LBM2D_1D_indices(dim, tau, &particles);
-			projWidth = (GRID_WIDTH > GRID_HEIGHT) ? GRID_WIDTH : GRID_HEIGHT;
+			lbm = new LBM2D_1D_indices(dim, sceneFilename, tau, &particles);
+
+			latticeWidth = lbm->latticeWidth;
+			latticeHeight = lbm->latticeHeight;
+			latticeDepth = 1;
+
+			projWidth = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
 			projection = glm::ortho(-1.0f, projWidth, -1.0f, projWidth, nearPlane, farPlane);
 			grid = new Grid3D(6, 6, 6);
 			camera = new Camera2D(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, 0.0f);
@@ -154,12 +163,22 @@ int runApp() {
 		case LBM3D:
 		default:
 			printf("LBM3D SETUP...\n");
-			lbm = new LBM3D_1D_indices(dim, tau, &particles, &heightMap);
-			projection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, nearPlane, farPlane);
+			lbm = new LBM3D_1D_indices(dim, sceneFilename, tau, &particles);
+
+			latticeWidth = lbm->latticeWidth;
+			latticeHeight = lbm->latticeHeight;
+			latticeDepth = lbm->latticeDepth;
+
+			float projectionRange = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
+			projectionRange = (projectionRange > latticeDepth) ? projectionRange : latticeDepth;
+			projectionRange /= 2.0f;
+
+			projection = glm::ortho(-projectionRange, projectionRange, -projectionRange, projectionRange, nearPlane, farPlane);
 			grid = new Grid2D();
-			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 10.0f, glm::vec3(GRID_WIDTH / 2.0f, GRID_HEIGHT / 2.0f, GRID_DEPTH / 2.0f));
+			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 10.0f, glm::vec3(latticeWidth / 2.0f, latticeHeight / 2.0f, latticeDepth / 2.0f));
 			break;
 	}
+	camera->setLatticeDimensions(latticeWidth, latticeHeight, latticeDepth);
 
 
 
@@ -168,7 +187,9 @@ int runApp() {
 	ShaderProgram unlitColorShader("unlitColor.vert", "unlitColor.frag");
 	ShaderProgram dirLightOnlyShader("dirLightOnly.vert", "dirLightOnly.frag");
 
-	heightMap.shader = &dirLightOnlyShader;
+	if (lbmType == LBM3D) {
+		((LBM3D_1D_indices*)lbm)->testHM->shader = &dirLightOnlyShader;
+	}
 
 	DirectionalLight dirLight;
 	dirLight.direction = glm::vec3(1.0f, 45.0f, 1.0f);
@@ -208,7 +229,7 @@ int runApp() {
 
 	glEnable(GL_DEPTH_TEST);
 
-	glfwSwapInterval(vsync); // V-Sync Settings (0 is off, 1 is 60FPS, 2 is 30FPS and so on)
+	glfwSwapInterval(vsync); // VSync Settings (0 is off, 1 is 60FPS, 2 is 30FPS and so on)
 
 	float prevTime = glfwGetTime();
 
@@ -317,7 +338,6 @@ void processInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
 		camera->processKeyboardMovement(Camera::ROTATE_LEFT, deltaTime);
 	}
-#ifdef RUN_LBM3D
 	if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
 		camera->setView(Camera::VIEW_FRONT);
 	}
@@ -327,8 +347,6 @@ void processInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 		camera->setView(Camera::VIEW_TOP);
 	}
-
-#endif
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
@@ -427,6 +445,8 @@ void saveConfigParam(string param, string val) {
 		useCUDA = (val == "true") ? true : false;
 	} else if (param == "tau") {
 		tau = stof(val);
+	} else if (param == "draw_streamlines") {
+		drawStreamlines = (val == "true") ? true : false;
 	}
 
 
