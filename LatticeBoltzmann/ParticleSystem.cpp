@@ -9,26 +9,14 @@ ParticleSystem::ParticleSystem() {
 
 ParticleSystem::ParticleSystem(int numParticles) : numParticles(numParticles) {
 	particleVertices = new glm::vec3[numParticles];
-	//streamLines.reserve(numParticles);
-	//for (int i = 0; i < numParticles; i++) {
-	//	//streamLines[i] = new glm::vec3[MAX_STREAMLINE_LENGTH]();
-	//	//streamLines[i].re(MAX_STREAMLINE_LENGTH);
-	//	streamLines.push_back(deque<glm::vec3>());
-	//}
+
+
 	streamLines = new glm::vec3[numParticles * MAX_STREAMLINE_LENGTH];
 
 	cudaMalloc((void**)&d_numParticles, sizeof(int));
 
 	cudaMemcpy(d_numParticles, &numParticles, sizeof(int), cudaMemcpyHostToDevice);
 
-	//float y = 0.5f;
-	//for (int i = 0; i < numParticles; i++) {
-	//	//particleVertices[i] = glm::vec3(rand() / (RAND_MAX / 4.0f), y++, -1.0f);
-	//	particleVertices[i] = glm::vec3(4.0f, y++, -1.0f);
-	//	//particleVertices[i] = glm::vec3(rand() / (RAND_MAX / (GRID_WIDTH - 1)),
-	//	//								rand() / (RAND_MAX / (GRID_HEIGHT - 1)),
-	//	//								-1.0f);
-	//}
 #ifdef RUN_LBM3D
 
 	// generate in the left wall
@@ -110,7 +98,7 @@ ParticleSystem::~ParticleSystem() {
 	delete[] streamLines;
 }
 
-void ParticleSystem::draw(const ShaderProgram & shader) {
+void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 
 	glUseProgram(shader.id);
 
@@ -119,25 +107,25 @@ void ParticleSystem::draw(const ShaderProgram & shader) {
 
 	glBindVertexArray(vao);
 
-#ifndef USE_INTEROP
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles, &particleVertices[0], GL_DYNAMIC_DRAW);
-#endif
+	if (!useCUDA) {
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles, &particleVertices[0], GL_DYNAMIC_DRAW);
+	}
 
 	glDrawArrays(GL_POINTS, 0, numParticles);
 
-#ifndef USE_CUDA
+	if (!useCUDA) {
 
-	glPointSize(1.0f);
-	shader.setVec4("color", glm::vec4(0.0f, 0.4f, 1.0f, 1.0f));
+		glPointSize(1.0f);
+		shader.setVec4("color", glm::vec4(0.0f, 0.4f, 1.0f, 1.0f));
 
-	glBindVertexArray(streamLinesVAO);
+		glBindVertexArray(streamLinesVAO);
 
-	glBindBuffer(GL_ARRAY_BUFFER, streamLinesVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles * MAX_STREAMLINE_LENGTH, &streamLines[0], GL_DYNAMIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, streamLinesVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles * MAX_STREAMLINE_LENGTH, &streamLines[0], GL_DYNAMIC_DRAW);
 
-	glDrawArrays(GL_POINTS, 0, numParticles  * MAX_STREAMLINE_LENGTH);
-#endif
+		glDrawArrays(GL_POINTS, 0, numParticles  * MAX_STREAMLINE_LENGTH);
+	}
 
 
 }

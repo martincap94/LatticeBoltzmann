@@ -4,19 +4,22 @@ LBM_type: 2D
 VSync: 0
 
 
-filename: 512x256_01.ppm
+scene_filename: 512x256_01.ppm
 
 // Whether to use CUDA (otherwise single-thread CPU implementation will be used) - this may be better used as define, since it will be faster
-use_CUDA: true // test
-// Whether to use interoperabilty between CUDA and OpenGL
-use_interoperability: true
+use_CUDA: true
 
 block_dim: 256
 
 // these properties are determined from the file?
-// grid_width
-// grid_height
-// grid_depth
+lattice_width: 512
+lattice_height: 256
+lattice_depth: 1
+
+// lattice_width: 60
+// lattice_height: 60
+// lattice_depth: 40
+
 
 
 
@@ -30,6 +33,10 @@ camera_velocity: 60.0
 
 tau: 0.52
 
+
+// ---- window properties ---- //
+window_width: 1000
+window_height: 1000
 
 
 

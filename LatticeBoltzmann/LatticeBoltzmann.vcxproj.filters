@@ -47,15 +47,6 @@
     <ClCompile Include="LatticeCollider.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LBM2D_reindexed.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="LBM2D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="LBM3D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -94,9 +85,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LBM2D.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Grid2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -109,16 +97,10 @@
     <ClInclude Include="Grid3D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LBM3D.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="GeneralGrid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="OrbitCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="LBM2D_reindexed.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LBM2D_1D_indices.h">

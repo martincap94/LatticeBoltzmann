@@ -82,7 +82,7 @@ public:
 	vector<glm::vec3> particleArrows;
 
 	LBM2D_1D_indices();
-	LBM2D_1D_indices(ParticleSystem *particleSystem);
+	LBM2D_1D_indices(glm::vec3 dim, float tau, ParticleSystem *particleSystem);
 	~LBM2D_1D_indices();
 
 	virtual void draw(ShaderProgram &shader);
@@ -100,7 +100,6 @@ public:
 	virtual void updateInlets();
 	void updateInlets(Node *lattice);
 	virtual void updateColliders();
-	void updateCollidersAlt();
 
 
 private:

@@ -102,12 +102,9 @@
     <CudaCompile Include="LBM2D_1D_indices.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
-    <ClCompile Include="LBM2D_reindexed.cpp" />
-    <ClCompile Include="LBM2D.cpp" />
     <CudaCompile Include="LBM3D_1D_indices.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
-    <ClCompile Include="LBM3D.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OrbitCamera.cpp" />
     <CudaCompile Include="ParticleSystem.cpp" />
@@ -127,10 +124,7 @@
     <ClInclude Include="Grid2D.h" />
     <CudaCompile Include="LBM.h" />
     <ClInclude Include="LBM2D_1D_indices.h" />
-    <ClInclude Include="LBM2D_reindexed.h" />
-    <ClInclude Include="LBM2D.h" />
     <ClInclude Include="LBM3D_1D_indices.h" />
-    <ClInclude Include="LBM3D.h" />
     <ClInclude Include="OrbitCamera.h" />
     <ClInclude Include="ParticleSystem.h" />
     <ClInclude Include="ShaderProgram.h" />

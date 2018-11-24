@@ -829,8 +829,8 @@ LBM3D_1D_indices::LBM3D_1D_indices() {
 
 
 
-LBM3D_1D_indices::LBM3D_1D_indices(ParticleSystem * particleSystem, HeightMap *heightMap)
-	: particleSystem(particleSystem), testHM(heightMap) {
+LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, float tau, ParticleSystem *particleSystem, HeightMap *heightMap)
+	: LBM(dim, tau), particleSystem(particleSystem), testHM(heightMap) {
 
 	particleVertices = particleSystem->particleVertices;
 
@@ -1021,7 +1021,7 @@ void LBM3D_1D_indices::doStepCUDA() {
 
 
 void LBM3D_1D_indices::clearBackLattice() {
-	for (int x = 0; x < GRID_WIDTH; x++) {
+	for (int x = 0; x < latticeWidth; x++) {
 		for (int y = 0; y < GRID_HEIGHT; y++) {
 			for (int z = 0; z < GRID_DEPTH; z++) {
 				int idx = getIdx(x, y, z);
@@ -1043,7 +1043,7 @@ void LBM3D_1D_indices::clearBackLattice() {
 void LBM3D_1D_indices::streamingStep() {
 
 
-	for (int x = 0; x < GRID_WIDTH; x++) {
+	for (int x = 0; x < latticeWidth; x++) {
 		for (int y = 0; y < GRID_HEIGHT; y++) {
 			for (int z = 0; z < GRID_DEPTH; z++) {
 				int idx = getIdx(x, y, z);
@@ -1062,8 +1062,8 @@ void LBM3D_1D_indices::streamingStep() {
 				bottom = y - 1;
 				front = z + 1;
 				back = z - 1;
-				if (right > GRID_WIDTH - 1) {
-					right = GRID_WIDTH - 1;
+				if (right > latticeWidth - 1) {
+					right = latticeWidth - 1;
 				}
 				if (left < 0) {
 					left = 0;
@@ -1118,7 +1118,7 @@ void LBM3D_1D_indices::collisionStep() {
 	float weightAxis = 1.0f / 18.0f;
 	float weightNonaxial = 1.0f / 36.0f;
 
-	for (int x = 0; x < GRID_WIDTH; x++) {
+	for (int x = 0; x < latticeWidth; x++) {
 		for (int y = 0; y < GRID_HEIGHT; y++) {
 			for (int z = 0; z < GRID_DEPTH; z++) {
 
@@ -1339,7 +1339,7 @@ void LBM3D_1D_indices::moveParticles() {
 		particleArrows.push_back(tmp);
 #endif
 
-		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= GRID_WIDTH - 1 ||
+		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
 			particleVertices[i].y <= 0.0f || particleVertices[i].y >= GRID_HEIGHT - 1 ||
 			particleVertices[i].z <= 0.0f || particleVertices[i].z >= GRID_DEPTH - 1) {
 
@@ -1684,7 +1684,7 @@ void LBM3D_1D_indices::updateInlets(Node3D *lattice) {
 void LBM3D_1D_indices::updateColliders() {
 
 
-	for (int x = 0; x < GRID_WIDTH; x++) {
+	for (int x = 0; x < latticeWidth; x++) {
 		for (int y = 0; y < GRID_HEIGHT; y++) {
 			for (int z = 0; z < GRID_DEPTH; z++) {
 				int idx = getIdx(x, y, z);
@@ -1735,11 +1735,11 @@ void LBM3D_1D_indices::updateColliders() {
 					backLattice[idx].adj[DIR_TOP_LEFT_EDGE] = bottomRight;
 					backLattice[idx].adj[DIR_BOTTOM_RIGHT_EDGE] = topLeft;
 					backLattice[idx].adj[DIR_BOTTOM_LEFT_EDGE] = topRight;
-
+/*
 					float macroDensity = calculateMacroscopicDensity(x, y, z);
 					glm::vec3 macroVelocity = calculateMacroscopicVelocity(x, y, z, macroDensity);
 					velocities[idx] = macroVelocity;
-
+*/
 				}
 
 
@@ -1803,7 +1803,7 @@ void LBM3D_1D_indices::initLattice() {
 	float weightMiddle = 1.0f / 3.0f;
 	float weightAxis = 1.0f / 18.0f;
 	float weightNonaxial = 1.0f / 36.0f;
-	for (int x = 0; x < GRID_WIDTH; x++) {
+	for (int x = 0; x < latticeWidth; x++) {
 		for (int y = 0; y < GRID_HEIGHT; y++) {
 			for (int z = 0; z < GRID_DEPTH; z++) {
 				int idx = getIdx(x, y, z);
@@ -1824,10 +1824,10 @@ void LBM3D_1D_indices::initLattice() {
 void LBM3D_1D_indices::initColliders() {
 
 	// test sphere collider
-	//glm::vec3 center(GRID_WIDTH / 2.0f, GRID_HEIGHT / 2.0f, GRID_DEPTH / 2.0f);
+	//glm::vec3 center(latticeWidth / 2.0f, GRID_HEIGHT / 2.0f, GRID_DEPTH / 2.0f);
 	//float radius = GRID_DEPTH / 2.0f;
 
-	//for (int x = 0; x < GRID_WIDTH; x++) {
+	//for (int x = 0; x < latticeWidth; x++) {
 	//	for (int y = 0; y < GRID_HEIGHT; y++) {
 	//		for (int z = 0; z < GRID_DEPTH; z++) {
 
@@ -1840,7 +1840,7 @@ void LBM3D_1D_indices::initColliders() {
 	//}
 
 
-	for (int x = GRID_WIDTH / 3.0f; x < GRID_WIDTH / 2.0f; x++) {
+	for (int x = latticeWidth / 3.0f; x < latticeWidth / 2.0f; x++) {
 		for (int y = GRID_HEIGHT / 4.0f; y < GRID_HEIGHT / 3.0f; y++) {
 			for (int z = GRID_DEPTH / 3.0f; z < GRID_DEPTH / 2.0f; z++) {
 				//cout << " =============================== " << endl;
@@ -1849,8 +1849,8 @@ void LBM3D_1D_indices::initColliders() {
 				//cout << idx << endl;
 
 				//int xDirection = idx % GRID_HEIGHT;
-				//int yDirection = (idx / GRID_HEIGHT) % GRID_WIDTH;
-				//int zDirection = idx / (GRID_WIDTH * GRID_HEIGHT);
+				//int yDirection = (idx / GRID_HEIGHT) % latticeWidth;
+				//int zDirection = idx / (latticeWidth * GRID_HEIGHT);
 				//cout << xDirection << ", " << yDirection << ", " << zDirection << endl;
 
 

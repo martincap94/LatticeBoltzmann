@@ -21,10 +21,7 @@
 #include <algorithm>
 
 #include "LBM.h"
-#include "LBM2D.h"
-#include "LBM2D_reindexed.h"
 #include "LBM2D_1D_indices.h"
-#include "LBM3D.h"
 #include "LBM3D_1D_indices.h"
 #include "HeightMap.h"
 #include "Grid2D.h"
@@ -37,11 +34,6 @@
 #include "ParticleSystem.h"
 #include "DirectionalLight.h"
 #include "Grid.h"
-
-
-
-#define WIDTH 1000
-#define HEIGHT 1000
 
 int runApp();
 void processInput(GLFWwindow* window);
@@ -65,6 +57,8 @@ Camera *camera;
 
 int vsync = 0;
 int numParticles = 1000; // default value
+string sceneFilename;
+bool useCUDA = true;
 
 float deltaTime = 0.0f;
 float lastFrameTime;
@@ -72,9 +66,19 @@ float lastFrameTime;
 glm::mat4 view;
 glm::mat4 projection;
 
+int windowWidth = 1000;
+int windowHeight = 1000;
 
 int screenWidth;
 int screenHeight;
+
+int latticeWidth = 100;
+int latticeHeight = 100;
+int latticeDepth = 100;
+
+float tau = 0.52f;
+
+
 
 
 int main(int argc, char **argv) {
@@ -99,7 +103,7 @@ int runApp() {
 
 	glfwWindowHint(GLFW_SAMPLES, 12); // enable MSAA with 4 samples
 
-	GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Lattice Boltzmann", nullptr, nullptr);
+	GLFWwindow *window = glfwCreateWindow(windowWidth, windowHeight, "Lattice Boltzmann", nullptr, nullptr);
 
 	if (!window) {
 		cerr << "Failed to create GLFW window" << endl;
@@ -132,12 +136,16 @@ int runApp() {
 	ParticleSystem particles(numParticles);
 
 	HeightMap heightMap(HEIGHTMAP_FILENAME, nullptr); // temporary fix, no need to load for 2D
+	//HeightMap heightMap(sceneFilename, nullptr); // temporary fix, no need to load for 2D
 
 	float projWidth;
+
+	glm::vec3 dim(latticeWidth, latticeHeight, latticeDepth);
+
 	switch (lbmType) {
 		case LBM2D:
 			printf("LBM2D SETUP...\n");
-			lbm = new LBM2D_1D_indices(&particles);
+			lbm = new LBM2D_1D_indices(dim, tau, &particles);
 			projWidth = (GRID_WIDTH > GRID_HEIGHT) ? GRID_WIDTH : GRID_HEIGHT;
 			projection = glm::ortho(-1.0f, projWidth, -1.0f, projWidth, nearPlane, farPlane);
 			grid = new Grid3D(6, 6, 6);
@@ -146,13 +154,12 @@ int runApp() {
 		case LBM3D:
 		default:
 			printf("LBM3D SETUP...\n");
-			lbm = new LBM3D_1D_indices(&particles, &heightMap);
+			lbm = new LBM3D_1D_indices(dim, tau, &particles, &heightMap);
 			projection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, nearPlane, farPlane);
 			grid = new Grid2D();
 			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 10.0f, glm::vec3(GRID_WIDTH / 2.0f, GRID_HEIGHT / 2.0f, GRID_DEPTH / 2.0f));
 			break;
 	}
-
 
 
 
@@ -203,6 +210,8 @@ int runApp() {
 
 	glfwSwapInterval(vsync); // V-Sync Settings (0 is off, 1 is 60FPS, 2 is 30FPS and so on)
 
+	float prevTime = glfwGetTime();
+
 	while (!glfwWindowShouldClose(window)) {
 
 		//cout << "frame " << frameCounter++ << endl;
@@ -210,6 +219,12 @@ int runApp() {
 		float currentFrameTime = glfwGetTime();
 		deltaTime = currentFrameTime - lastFrameTime;
 		lastFrameTime = currentFrameTime;
+		frameCounter++;
+		if (currentFrameTime - prevTime >= 1.0f) {
+			printf("Avg delta time = %0.4f [ms]\n", (1000.0f / frameCounter));
+			prevTime += (currentFrameTime - prevTime);
+			frameCounter = 0;
+		}
 		//cout << " Delta time = " << (deltaTime * 1000.0f) << " [ms]" << endl;
 		//cout << " Framerate = " << (1.0f / deltaTime) << endl;
 
@@ -222,11 +237,11 @@ int runApp() {
 		processInput(window);
 
 
-#ifdef USE_CUDA
-		lbm->doStepCUDA();
-#else
-		lbm->doStep();
-#endif
+		if (useCUDA) {
+			lbm->doStepCUDA();
+		} else {
+			lbm->doStep();
+		}
 
 
 		view = camera->getViewMatrix();
@@ -254,7 +269,7 @@ int runApp() {
 
 
 
-		particles.draw(singleColorShaderAlpha);
+		particles.draw(singleColorShaderAlpha, useCUDA);
 
 		//grid.draw(singleColorShaderAlpha);
 
@@ -396,6 +411,22 @@ void saveConfigParam(string param, string val) {
 		vsync = stoi(val);
 	} else if (param == "num_particles") {
 		numParticles = stoi(val);
+	} else if (param == "scene_filename") {
+		sceneFilename = val;
+	} else if (param == "window_width") {
+		windowWidth = stoi(val);
+	} else if (param == "window_height") {
+		windowHeight = stoi(val);
+	} else if (param == "lattice_width") {
+		latticeWidth = stoi(val);
+	} else if (param == "lattice_height") {
+		latticeHeight = stoi(val);
+	} else if (param == "lattice_depth") {
+		latticeDepth = stoi(val);
+	} else if (param == "use_CUDA") {
+		useCUDA = (val == "true") ? true : false;
+	} else if (param == "tau") {
+		tau = stof(val);
 	}
 
 

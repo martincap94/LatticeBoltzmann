@@ -119,7 +119,7 @@ public:
 
 
 	LBM3D_1D_indices();
-	LBM3D_1D_indices(ParticleSystem *particleSystem, HeightMap *heightMap);
+	LBM3D_1D_indices(glm::vec3 dim, float tau, ParticleSystem *particleSystem, HeightMap *heightMap);
 	~LBM3D_1D_indices();
 
 	virtual void draw(ShaderProgram &shader);

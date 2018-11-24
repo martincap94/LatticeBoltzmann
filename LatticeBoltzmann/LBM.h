@@ -7,7 +7,15 @@ public:
 
 	int *d_numParticles;
 
+	int latticeWidth;
+	int latticeHeight;
+	int latticeDepth;
+
+	float tau = 0.52f;
+	float itau;
+
 	LBM();
+	LBM(glm::vec3 dimensions, float tau);
 	~LBM();
 
 	virtual void draw(ShaderProgram &shader) = 0;

@@ -461,7 +461,7 @@ void LBM2D_1D_indices::collisionStepCUDA() {
 LBM2D_1D_indices::LBM2D_1D_indices() {
 }
 
-LBM2D_1D_indices::LBM2D_1D_indices(ParticleSystem *particleSystem) : particleSystem(particleSystem) {
+LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, float tau, ParticleSystem *particleSystem) : LBM(dim, tau), particleSystem(particleSystem) {
 
 	particleVertices = particleSystem->particleVertices;
 	frontLattice = new Node[GRID_WIDTH * GRID_HEIGHT]();
@@ -476,6 +476,7 @@ LBM2D_1D_indices::LBM2D_1D_indices(ParticleSystem *particleSystem) : particleSys
 	cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * particleSystem->numParticles);
 
 	d_numParticles = particleSystem->d_numParticles;
+
 
 	cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, particleSystem->vbo, cudaGraphicsMapFlagsWriteDiscard);
 
@@ -517,7 +518,7 @@ void LBM2D_1D_indices::draw(ShaderProgram &shader) {
 	glUseProgram(shader.id);
 
 	glBindVertexArray(vao);
-	glDrawArrays(GL_POINTS, 0, GRID_WIDTH * GRID_HEIGHT);
+	glDrawArrays(GL_POINTS, 0, latticeWidth * latticeHeight);
 
 
 	//cout << "Velocity arrows size = " << velocityArrows.size() << endl;
@@ -640,8 +641,8 @@ void LBM2D_1D_indices::doStepCUDA() {
 }
 
 void LBM2D_1D_indices::clearBackLattice() {
-	for (int x = 0; x < GRID_WIDTH; x++) {
-		for (int y = 0; y < GRID_HEIGHT; y++) {
+	for (int x = 0; x < latticeWidth; x++) {
+		for (int y = 0; y < latticeHeight; y++) {
 			for (int i = 0; i < 9; i++) {
 				backLattice[getIdx(x, y)].adj[i] = 0.0f;
 			}
@@ -653,8 +654,8 @@ void LBM2D_1D_indices::clearBackLattice() {
 
 void LBM2D_1D_indices::streamingStep() {
 
-	for (int x = 0; x < GRID_WIDTH; x++) {
-		for (int y = 0; y < GRID_HEIGHT; y++) {
+	for (int x = 0; x < latticeWidth; x++) {
+		for (int y = 0; y < latticeHeight; y++) {
 
 			backLattice[getIdx(x, y)].adj[DIR_MIDDLE] += frontLattice[getIdx(x, y)].adj[DIR_MIDDLE];
 
@@ -667,14 +668,14 @@ void LBM2D_1D_indices::streamingStep() {
 			left = x - 1;
 			top = y + 1;
 			bottom = y - 1;
-			if (right > GRID_WIDTH - 1) {
-				right = GRID_WIDTH - 1;
+			if (right > latticeWidth - 1) {
+				right = latticeWidth - 1;
 			}
 			if (left < 0) {
 				left = 0;
 			}
-			if (top > GRID_HEIGHT - 1) {
-				top = GRID_HEIGHT - 1;
+			if (top > latticeHeight - 1) {
+				top = latticeHeight - 1;
 			}
 			if (bottom < 0) {
 				bottom = 0;
@@ -708,13 +709,13 @@ void LBM2D_1D_indices::collisionStep() {
 	float weightAxis = 1.0f / 9.0f;
 	float weightDiagonal = 1.0f / 36.0f;
 
-	for (int x = 0; x < GRID_WIDTH; x++) {
-		for (int y = 0; y < GRID_HEIGHT; y++) {
+	for (int x = 0; x < latticeWidth; x++) {
+		for (int y = 0; y < latticeHeight; y++) {
 
-			/*if (x == 0 || x == GRID_WIDTH - 1) {
+			/*if (x == 0 || x == latticeWidth - 1) {
 				continue;
 			}
-			if (y == 0 || y == GRID_HEIGHT - 1) {
+			if (y == 0 || y == latticeHeight - 1) {
 				continue;
 			}*/
 
@@ -790,15 +791,15 @@ void LBM2D_1D_indices::collisionStep() {
 			secondTerm = 4.5f * dotProd * dotProd;
 			float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
-			backLattice[idx].adj[DIR_MIDDLE] -= ITAU * (backLattice[idx].adj[DIR_MIDDLE] - middleEq);
-			backLattice[idx].adj[DIR_RIGHT] -= ITAU * (backLattice[idx].adj[DIR_RIGHT] - rightEq);
-			backLattice[idx].adj[DIR_TOP] -= ITAU * (backLattice[idx].adj[DIR_TOP] - topEq);
-			backLattice[idx].adj[DIR_LEFT] -= ITAU * (backLattice[idx].adj[DIR_LEFT] - leftEq);
-			backLattice[idx].adj[DIR_BOTTOM] -= ITAU * (backLattice[idx].adj[DIR_BOTTOM] - bottomEq);
-			backLattice[idx].adj[DIR_TOP_RIGHT] -= ITAU * (backLattice[idx].adj[DIR_TOP_RIGHT] - topRightEq);
-			backLattice[idx].adj[DIR_TOP_LEFT] -= ITAU * (backLattice[idx].adj[DIR_TOP_LEFT] - topLeftEq);
-			backLattice[idx].adj[DIR_BOTTOM_LEFT] -= ITAU * (backLattice[idx].adj[DIR_BOTTOM_LEFT] - bottomLeftEq);
-			backLattice[idx].adj[DIR_BOTTOM_RIGHT] -= ITAU * (backLattice[idx].adj[DIR_BOTTOM_RIGHT] - bottomRightEq);
+			backLattice[idx].adj[DIR_MIDDLE] -= itau * (backLattice[idx].adj[DIR_MIDDLE] - middleEq);
+			backLattice[idx].adj[DIR_RIGHT] -= itau * (backLattice[idx].adj[DIR_RIGHT] - rightEq);
+			backLattice[idx].adj[DIR_TOP] -= itau * (backLattice[idx].adj[DIR_TOP] - topEq);
+			backLattice[idx].adj[DIR_LEFT] -= itau * (backLattice[idx].adj[DIR_LEFT] - leftEq);
+			backLattice[idx].adj[DIR_BOTTOM] -= itau * (backLattice[idx].adj[DIR_BOTTOM] - bottomEq);
+			backLattice[idx].adj[DIR_TOP_RIGHT] -= itau * (backLattice[idx].adj[DIR_TOP_RIGHT] - topRightEq);
+			backLattice[idx].adj[DIR_TOP_LEFT] -= itau * (backLattice[idx].adj[DIR_TOP_LEFT] - topLeftEq);
+			backLattice[idx].adj[DIR_BOTTOM_LEFT] -= itau * (backLattice[idx].adj[DIR_BOTTOM_LEFT] - bottomLeftEq);
+			backLattice[idx].adj[DIR_BOTTOM_RIGHT] -= itau * (backLattice[idx].adj[DIR_BOTTOM_RIGHT] - bottomRightEq);
 
 
 			for (int i = 0; i < 9; i++) {
@@ -816,8 +817,8 @@ void LBM2D_1D_indices::collisionStep() {
 void LBM2D_1D_indices::collisionStepStreamlined() {
 
 
-	for (int x = 0; x < GRID_WIDTH; x++) {
-		for (int y = 0; y < GRID_HEIGHT; y++) {
+	for (int x = 0; x < latticeWidth; x++) {
+		for (int y = 0; y < latticeHeight; y++) {
 
 			float macroDensity = calculateMacroscopicDensity(x, y);
 
@@ -857,15 +858,15 @@ void LBM2D_1D_indices::collisionStepStreamlined() {
 			float bottomRightEq = leftTermDiagonal * (1.0f + 3.0f * (macroVelocity.x - macroVelocity.y) +
 													  4.5f * (macroVelocity.x - macroVelocity.y) * (macroVelocity.x - macroVelocity.y) - thirdTerm);
 
-			backLattice[idx].adj[DIR_MIDDLE] -= ITAU * (backLattice[idx].adj[DIR_MIDDLE] - middleEq);
-			backLattice[idx].adj[DIR_RIGHT] -= ITAU * (backLattice[idx].adj[DIR_RIGHT] - rightEq);
-			backLattice[idx].adj[DIR_TOP] -= ITAU * (backLattice[idx].adj[DIR_TOP] - topEq);
-			backLattice[idx].adj[DIR_LEFT] -= ITAU * (backLattice[idx].adj[DIR_LEFT] - leftEq);
-			backLattice[idx].adj[DIR_BOTTOM] -= ITAU * (backLattice[idx].adj[DIR_BOTTOM] - bottomEq);
-			backLattice[idx].adj[DIR_TOP_RIGHT] -= ITAU * (backLattice[idx].adj[DIR_TOP_RIGHT] - topRightEq);
-			backLattice[idx].adj[DIR_TOP_LEFT] -= ITAU * (backLattice[idx].adj[DIR_TOP_LEFT] - topLeftEq);
-			backLattice[idx].adj[DIR_BOTTOM_LEFT] -= ITAU * (backLattice[idx].adj[DIR_BOTTOM_LEFT] - bottomLeftEq);
-			backLattice[idx].adj[DIR_BOTTOM_RIGHT] -= ITAU * (backLattice[idx].adj[DIR_BOTTOM_RIGHT] - bottomRightEq);
+			backLattice[idx].adj[DIR_MIDDLE] -= itau * (backLattice[idx].adj[DIR_MIDDLE] - middleEq);
+			backLattice[idx].adj[DIR_RIGHT] -= itau * (backLattice[idx].adj[DIR_RIGHT] - rightEq);
+			backLattice[idx].adj[DIR_TOP] -= itau * (backLattice[idx].adj[DIR_TOP] - topEq);
+			backLattice[idx].adj[DIR_LEFT] -= itau * (backLattice[idx].adj[DIR_LEFT] - leftEq);
+			backLattice[idx].adj[DIR_BOTTOM] -= itau * (backLattice[idx].adj[DIR_BOTTOM] - bottomEq);
+			backLattice[idx].adj[DIR_TOP_RIGHT] -= itau * (backLattice[idx].adj[DIR_TOP_RIGHT] - topRightEq);
+			backLattice[idx].adj[DIR_TOP_LEFT] -= itau * (backLattice[idx].adj[DIR_TOP_LEFT] - topLeftEq);
+			backLattice[idx].adj[DIR_BOTTOM_LEFT] -= itau * (backLattice[idx].adj[DIR_BOTTOM_LEFT] - bottomLeftEq);
+			backLattice[idx].adj[DIR_BOTTOM_RIGHT] -= itau * (backLattice[idx].adj[DIR_BOTTOM_RIGHT] - bottomRightEq);
 
 
 			for (int i = 0; i < 9; i++) {
@@ -928,21 +929,21 @@ void LBM2D_1D_indices::moveParticles() {
 #endif
 
 
-		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= GRID_WIDTH - 1 ||
-			particleVertices[i].y <= 0.0f || particleVertices[i].y >= GRID_HEIGHT - 1) {
+		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
+			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1) {
 #ifdef MIRROR_SIDES
-			if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= GRID_WIDTH - 1) {
+			if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
 				particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
-				if (respawnIndex >= GRID_HEIGHT - 1) {
+				if (respawnIndex >= latticeHeight - 1) {
 					respawnIndex = 0;
 				}
 			} else {
-				particleVertices[i] = glm::vec3(x, (int)(particleVertices[i].y + GRID_HEIGHT - 1) % (GRID_HEIGHT - 1), 0.0f);
+				particleVertices[i] = glm::vec3(x, (int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1), 0.0f);
 			}
 
 #else
 			particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
-			if (respawnIndex >= GRID_HEIGHT - 1) {
+			if (respawnIndex >= latticeHeight - 1) {
 				respawnIndex = 0;
 			}
 #endif
@@ -1030,7 +1031,7 @@ void LBM2D_1D_indices::updateInlets() {
 	float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-	for (int y = 0; y < GRID_HEIGHT; y++) {
+	for (int y = 0; y < latticeHeight; y++) {
 		int idx = getIdx(0, y);
 		backLattice[idx].adj[DIR_MIDDLE] = middleEq;
 		backLattice[idx].adj[DIR_RIGHT] = rightEq;
@@ -1128,8 +1129,8 @@ void LBM2D_1D_indices::updateInlets(Node *lattice) {
 	float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-	for (int x = 0; x < GRID_WIDTH; x++) {
-		for (int y = 0; y < GRID_HEIGHT; y++) {
+	for (int x = 0; x < latticeWidth; x++) {
+		for (int y = 0; y < latticeHeight; y++) {
 			int idx = getIdx(x, y);
 			lattice[idx].adj[DIR_MIDDLE] = middleEq;
 			lattice[idx].adj[DIR_RIGHT] = rightEq;
@@ -1155,11 +1156,11 @@ void LBM2D_1D_indices::updateInlets(Node *lattice) {
 
 void LBM2D_1D_indices::updateColliders() {
 
-	for (int x = 0; x < GRID_WIDTH; x++) {
-		for (int y = 0; y < GRID_HEIGHT; y++) {
+	for (int x = 0; x < latticeWidth; x++) {
+		for (int y = 0; y < latticeHeight; y++) {
 			int idx = getIdx(x, y);
 
-			if (/*testCollider[row][col] ||*/ /*y == 0 || y == GRID_HEIGHT - 1 ||*/ tCol->area[idx]) {
+			if (/*testCollider[row][col] ||*/ /*y == 0 || y == latticeHeight - 1 ||*/ tCol->area[idx]) {
 
 
 				float right = backLattice[idx].adj[DIR_RIGHT];
@@ -1202,8 +1203,8 @@ void LBM2D_1D_indices::initBuffers() {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
 	vector<glm::vec3> bData;
-	for (int x = 0; x < GRID_WIDTH; x++) {
-		for (int y = 0; y < GRID_HEIGHT; y++) {
+	for (int x = 0; x < latticeWidth; x++) {
+		for (int y = 0; y < latticeHeight; y++) {
 			bData.push_back(glm::vec3(x, y, 0.0f));
 		}
 	}
@@ -1251,8 +1252,8 @@ void LBM2D_1D_indices::initLattice() {
 	float weightAxis = 1.0f / 9.0f;
 	float weightDiagonal = 1.0f / 36.0f;
 
-	for (int x = 0; x < GRID_WIDTH; x++) {
-		for (int y = 0; y < GRID_HEIGHT; y++) {
+	for (int x = 0; x < latticeWidth; x++) {
+		for (int y = 0; y < latticeHeight; y++) {
 			int idx = getIdx(x, y);
 			frontLattice[idx].adj[DIR_MIDDLE] = weightMiddle;
 			for (int dir = 1; dir <= 4; dir++) {
@@ -1270,7 +1271,7 @@ void LBM2D_1D_indices::initLattice() {
 void LBM2D_1D_indices::initTestCollider() {
 	tCol = new LatticeCollider(COLLIDER_FILENAME);
 
-	cudaMemcpy(d_tCol, &tCol->area[0], sizeof(bool) * GRID_WIDTH * GRID_HEIGHT, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_tCol, &tCol->area[0], sizeof(bool) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 
 }
 
