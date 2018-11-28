@@ -726,7 +726,7 @@ __global__ void updateCollidersKernel(Node3D *backLattice, glm::vec3 *velocities
 		int z = idx / (d_latticeHeight * d_latticeWidth);
 
 		//if (testHM->data[x][z] >= y && testHM->data[x][z] > 0.01f)
-		if (heightMap[x + z * d_latticeWidth] >= y && heightMap[x + z * d_latticeWidth] > 0.01f) {
+		if ((heightMap[x + z * d_latticeWidth] >= y && heightMap[x + z * d_latticeWidth] > 0.01f) || y == 0) {
 
 			float right = backLattice[idx].adj[DIR_RIGHT_FACE];
 			float left = backLattice[idx].adj[DIR_LEFT_FACE];

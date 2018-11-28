@@ -157,7 +157,7 @@ int runApp() {
 
 			projWidth = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
 			projection = glm::ortho(-1.0f, projWidth, -1.0f, projWidth, nearPlane, farPlane);
-			grid = new Grid3D(6, 6, 6);
+			grid = new Grid2D();
 			camera = new Camera2D(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, 0.0f);
 			break;
 		case LBM3D:
@@ -174,7 +174,7 @@ int runApp() {
 			projectionRange /= 2.0f;
 
 			projection = glm::ortho(-projectionRange, projectionRange, -projectionRange, projectionRange, nearPlane, farPlane);
-			grid = new Grid2D();
+			grid = new Grid3D(6, 6, 6);
 			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 10.0f, glm::vec3(latticeWidth / 2.0f, latticeHeight / 2.0f, latticeDepth / 2.0f));
 			break;
 	}

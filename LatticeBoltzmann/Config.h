@@ -51,7 +51,7 @@
 #define TAU 0.55f
 #define ITAU (1.0f / TAU)
 
-//#define SUBGRID_EXPERIMENTAL
+#define SUBGRID_EXPERIMENTAL
 #define SMAG_C 0.3f
 
 using namespace std;

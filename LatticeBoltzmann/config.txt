@@ -1,11 +1,11 @@
 // Options: 2D, 3D
-LBM_type: 2D
+LBM_type: 3D
 
 // VSync Settings (0 is off, 1 is 60FPS, 2 is 30FPS and so on)
 VSync: 0
 
 
-scene_filename: 300x100_03.ppm
+scene_filename: 60x40_05.ppm
 
 // Whether to use CUDA (otherwise single-thread CPU implementation will be used) - this may be better used as define, since it will be faster
 use_CUDA: true
@@ -22,7 +22,7 @@ block_dim: 256
 // lattice_depth: 60
 
 // for 3D scenes (for now)
-lattice_height: 10
+lattice_height: 40
 
 
 
@@ -32,11 +32,11 @@ max_streamline_length: 200
 
 lattice_speed_multiplier: 1.0
 
-num_particles: 10000
+num_particles: 50000
 
 camera_velocity: 60.0
 
-tau: 0.52
+tau: 0.7
 
 
 // ---- window properties ---- //
