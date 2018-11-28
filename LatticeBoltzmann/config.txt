@@ -8,7 +8,7 @@ VSync: 0
 scene_filename: 60x40_05.ppm
 
 // Whether to use CUDA (otherwise single-thread CPU implementation will be used) - this may be better used as define, since it will be faster
-use_CUDA: true
+use_CUDA: false
 
 block_dim: 256
 
@@ -32,11 +32,11 @@ max_streamline_length: 200
 
 lattice_speed_multiplier: 1.0
 
-num_particles: 50000
+num_particles: 100000
 
 camera_velocity: 60.0
 
-tau: 0.7
+tau: 0.51
 
 
 // ---- window properties ---- //

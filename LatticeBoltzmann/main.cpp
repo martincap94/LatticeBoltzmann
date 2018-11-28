@@ -35,7 +35,7 @@
 #include "DirectionalLight.h"
 #include "Grid.h"
 
-//#include <vld.h>
+#include <vld.h>
 
 int runApp();
 void processInput(GLFWwindow* window);
@@ -233,6 +233,8 @@ int runApp() {
 
 	float prevTime = glfwGetTime();
 
+	int totalFrameCounter = 0;
+
 	while (!glfwWindowShouldClose(window)) {
 
 		//cout << "frame " << frameCounter++ << endl;
@@ -241,6 +243,7 @@ int runApp() {
 		deltaTime = currentFrameTime - lastFrameTime;
 		lastFrameTime = currentFrameTime;
 		frameCounter++;
+		totalFrameCounter++;
 		if (currentFrameTime - prevTime >= 1.0f) {
 			printf("Avg delta time = %0.4f [ms]\n", (1000.0f / frameCounter));
 			prevTime += (currentFrameTime - prevTime);

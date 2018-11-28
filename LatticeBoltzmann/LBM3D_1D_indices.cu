@@ -1315,6 +1315,67 @@ void LBM3D_1D_indices::collisionStep() {
 				float bottomLeftEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
+				if (true) {
+					// SUBGRID MODEL
+					float tensor[3][3];
+
+					float diffs[19];
+					diffs[0] = (backLattice[idx].adj[DIR_MIDDLE_VERTEX] - middleEq);
+					diffs[1] = (backLattice[idx].adj[DIR_RIGHT_FACE] - rightEq);
+					diffs[2] = (backLattice[idx].adj[DIR_LEFT_FACE] - leftEq);
+					diffs[3] = (backLattice[idx].adj[DIR_BACK_FACE] - backEq);
+					diffs[4] = (backLattice[idx].adj[DIR_FRONT_FACE] - frontEq);
+					diffs[5] = (backLattice[idx].adj[DIR_TOP_FACE] - topEq);
+					diffs[6] = (backLattice[idx].adj[DIR_BOTTOM_FACE] - bottomEq);
+					diffs[7] = (backLattice[idx].adj[DIR_BACK_RIGHT_EDGE] - backRightEq);
+					diffs[8] = (backLattice[idx].adj[DIR_BACK_LEFT_EDGE] - backLeftEq);
+					diffs[9] = (backLattice[idx].adj[DIR_FRONT_RIGHT_EDGE] - frontRightEq);
+					diffs[10] = (backLattice[idx].adj[DIR_FRONT_LEFT_EDGE] - frontLeftEq);
+					diffs[11] = (backLattice[idx].adj[DIR_TOP_BACK_EDGE] - topBackEq);
+					diffs[12] = (backLattice[idx].adj[DIR_TOP_FRONT_EDGE] - topFrontEq);
+					diffs[13] = (backLattice[idx].adj[DIR_BOTTOM_BACK_EDGE] - bottomBackEq);
+					diffs[14] = (backLattice[idx].adj[DIR_BOTTOM_FRONT_EDGE] - bottomFrontEq);
+					diffs[15] = (backLattice[idx].adj[DIR_TOP_RIGHT_EDGE] - topRightEq);
+					diffs[16] = (backLattice[idx].adj[DIR_TOP_LEFT_EDGE] - topLeftEq);
+					diffs[17] = (backLattice[idx].adj[DIR_BOTTOM_RIGHT_EDGE] - bottomRightEq);
+					diffs[18] = (backLattice[idx].adj[DIR_BOTTOM_LEFT_EDGE] - bottomLeftEq);
+
+					float sum = 0.0f;
+					for (int i = 0; i < 19; i++) {
+						sum += diffs[i];
+					}
+
+					for (int i = 0; i < 9; i++) {
+						tensor[0][0] = 0.0f;
+					}
+					for (int i = 0; i < 19; i++) {
+						tensor[0][0] += directionVectors3D[i].x * directionVectors3D[i].x * diffs[i];
+						tensor[0][1] += directionVectors3D[i].x * directionVectors3D[i].y * diffs[i];
+						tensor[0][2] += directionVectors3D[i].x * directionVectors3D[i].z * diffs[i];
+						tensor[1][0] += directionVectors3D[i].y * directionVectors3D[i].x * diffs[i];
+						tensor[1][1] += directionVectors3D[i].y * directionVectors3D[i].y * diffs[i];
+						tensor[1][2] += directionVectors3D[i].y * directionVectors3D[i].z * diffs[i];
+						tensor[2][0] += directionVectors3D[i].z * directionVectors3D[i].x * diffs[i];
+						tensor[2][1] += directionVectors3D[i].z * directionVectors3D[i].y * diffs[i];
+						tensor[2][2] += directionVectors3D[i].z * directionVectors3D[i].z * diffs[i];
+					}
+
+					sum = 0.0f;
+					for (int i = 0; i < 3; i++) {
+						for (int j = 0; j < 3; j++) {
+							sum += tensor[i][j] * tensor[i][j];
+						}
+					}
+
+					float S = (-nu + sqrtf(nu * nu + 18.0f * SMAG_C * sqrtf(sum))) / (6.0f * SMAG_C * SMAG_C);
+
+					tau = 3.0f * (nu + SMAG_C * SMAG_C * S) + 0.5f;
+					itau = 1.0f / tau;
+				}
+
+
+
+
 				backLattice[idx].adj[DIR_MIDDLE_VERTEX] -= itau * (backLattice[idx].adj[DIR_MIDDLE_VERTEX] - middleEq);
 				backLattice[idx].adj[DIR_RIGHT_FACE] -= itau * (backLattice[idx].adj[DIR_RIGHT_FACE] - rightEq);
 				backLattice[idx].adj[DIR_LEFT_FACE] -= itau * (backLattice[idx].adj[DIR_LEFT_FACE] - leftEq);
