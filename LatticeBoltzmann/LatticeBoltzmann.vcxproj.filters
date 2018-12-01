@@ -27,7 +27,7 @@
     <CudaCompile Include="LBM.h">
       <Filter>Header Files</Filter>
     </CudaCompile>
-    <CudaCompile Include="ParticleSystem.cpp">
+    <CudaCompile Include="ParticleSystem.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>

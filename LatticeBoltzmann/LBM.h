@@ -34,6 +34,7 @@ public:
 	virtual void moveParticles() = 0;
 	virtual void updateInlets() = 0;
 	virtual void updateColliders() = 0;
+	virtual void resetSimulation() = 0;
 
 
 };

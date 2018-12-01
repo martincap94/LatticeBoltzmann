@@ -1883,6 +1883,9 @@ void LBM3D_1D_indices::updateColliders() {
 
 }
 
+void LBM3D_1D_indices::resetSimulation() {
+}
+
 void LBM3D_1D_indices::initBuffers() {
 
 	glGenVertexArrays(1, &colliderVAO);

@@ -55,6 +55,7 @@ ParticleSystem::~ParticleSystem() {
 	if (streamLines != nullptr) {
 		delete[] streamLines;
 	}
+	cudaFree(d_numParticles);
 }
 
 void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {

@@ -491,6 +491,26 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 
 }
 
+void LBM2D_1D_indices::resetSimulation() {
+	cout << "Resetting simulation..." << endl;
+	particleSystem->initParticlePositions(latticeWidth, latticeHeight);
+	for (int i = 0; i < latticeWidth * latticeHeight; i++) {
+		for (int j = 0; j < 9; j++) {
+			backLattice[i].adj[j] = 0.0f;
+		}
+		velocities[i] = glm::vec3(0.0f);
+	}
+	initLattice();
+#ifdef USE_CUDA
+	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_backLattice, backLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+#endif
+
+}
+
+
 
 LBM2D_1D_indices::~LBM2D_1D_indices() {
 	delete[] frontLattice;
@@ -526,7 +546,9 @@ void LBM2D_1D_indices::initScene() {
 	particleSystem->initParticlePositions(latticeWidth, latticeHeight);
 
 
-	cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * particleSystem->numParticles);
+	//cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * particleSystem->numParticles);
+	//cudaMemcpy(d_particleVertices, particleSystem->particleVertices, sizeof(glm::vec3) * particleSystem->numParticles, cudaMemcpyHostToDevice);
+
 
 
 }
@@ -1307,7 +1329,6 @@ void LBM2D_1D_indices::updateColliders() {
 	}
 
 }
-
 
 void LBM2D_1D_indices::initBuffers() {
 

@@ -137,6 +137,9 @@ public:
 	void updateInlets(Node3D *lattice);
 	virtual void updateColliders();
 
+	virtual void resetSimulation();
+
+
 
 private:
 

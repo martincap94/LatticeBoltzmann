@@ -107,7 +107,7 @@
     </CudaCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OrbitCamera.cpp" />
-    <CudaCompile Include="ParticleSystem.cpp" />
+    <CudaCompile Include="ParticleSystem.cu" />
     <ClCompile Include="ShaderProgram.cpp" />
   </ItemGroup>
   <ItemGroup>

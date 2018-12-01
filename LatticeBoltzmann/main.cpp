@@ -56,6 +56,7 @@ LBMType lbmType;
 LBM *lbm;
 Grid *grid;
 Camera *camera;
+ParticleSystem *particleSystem;
 
 int vsync = 0;
 int numParticles = 1000; // default value
@@ -107,6 +108,12 @@ int runApp() {
 
 	glfwWindowHint(GLFW_SAMPLES, 12); // enable MSAA with 4 samples
 
+	//if (lbmType == LBM2D) {
+	//	float ratio = (float)latticeWidth / (float)latticeHeight;
+	//	cout << "RATIO = " << ratio << endl;
+	//	windowHeight /= ratio;
+	//}
+
 	GLFWwindow *window = glfwCreateWindow(windowWidth, windowHeight, "Lattice Boltzmann", nullptr, nullptr);
 
 	if (!window) {
@@ -137,7 +144,7 @@ int runApp() {
 
 
 
-	ParticleSystem particles(numParticles, drawStreamlines);
+	particleSystem = new ParticleSystem(numParticles, drawStreamlines);
 
 	//HeightMap heightMap(HEIGHTMAP_FILENAME, nullptr); // temporary fix, no need to load for 2D
 	//HeightMap heightMap(sceneFilename, nullptr); // temporary fix, no need to load for 2D
@@ -149,7 +156,7 @@ int runApp() {
 	switch (lbmType) {
 		case LBM2D:
 			printf("LBM2D SETUP...\n");
-			lbm = new LBM2D_1D_indices(dim, sceneFilename, tau, &particles);
+			lbm = new LBM2D_1D_indices(dim, sceneFilename, tau, particleSystem);
 
 			latticeWidth = lbm->latticeWidth;
 			latticeHeight = lbm->latticeHeight;
@@ -157,13 +164,14 @@ int runApp() {
 
 			projWidth = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
 			projection = glm::ortho(-1.0f, projWidth, -1.0f, projWidth, nearPlane, farPlane);
+			//projection = glm::ortho(-1.0f, (float)latticeWidth, -1.0f, (float)latticeHeight, nearPlane, farPlane);
 			grid = new Grid2D();
 			camera = new Camera2D(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, 0.0f);
 			break;
 		case LBM3D:
 		default:
 			printf("LBM3D SETUP...\n");
-			lbm = new LBM3D_1D_indices(dim, sceneFilename, tau, &particles);
+			lbm = new LBM3D_1D_indices(dim, sceneFilename, tau, particleSystem);
 
 			latticeWidth = lbm->latticeWidth;
 			latticeHeight = lbm->latticeHeight;
@@ -293,7 +301,7 @@ int runApp() {
 
 
 
-		particles.draw(singleColorShaderAlpha, useCUDA);
+		particleSystem->draw(singleColorShaderAlpha, useCUDA);
 
 		//grid.draw(singleColorShaderAlpha);
 
@@ -311,6 +319,7 @@ int runApp() {
 	delete lbm;
 	delete grid;
 	delete camera;
+	delete particleSystem;
 
 	glfwTerminate();
 	return 0;
@@ -349,6 +358,9 @@ void processInput(GLFWwindow* window) {
 	}	
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 		camera->setView(Camera::VIEW_TOP);
+	}
+	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+		lbm->resetSimulation();
 	}
 }
 
