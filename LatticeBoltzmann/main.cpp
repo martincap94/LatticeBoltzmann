@@ -53,6 +53,11 @@
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+
+
 
 int runApp();
 void processInput(GLFWwindow* window);
@@ -103,6 +108,8 @@ float tau = 0.52f;
 bool drawStreamlines = false;
 
 int paused = 0;
+
+int usePointSprites = 0;
 
 
 
@@ -247,6 +254,7 @@ int runApp() {
 	ShaderProgram singleColorShaderAlpha("singleColor.vert", "singleColor_alpha.frag");
 	ShaderProgram unlitColorShader("unlitColor.vert", "unlitColor.frag");
 	ShaderProgram dirLightOnlyShader("dirLightOnly.vert", "dirLightOnly.frag");
+	ShaderProgram pointSpriteTestShader("pointSpriteTest.vert", "pointSpriteTest.frag");
 
 	if (lbmType == LBM3D) {
 		((LBM3D_1D_indices*)lbm)->testHM->shader = &dirLightOnlyShader;
@@ -269,14 +277,16 @@ int runApp() {
 
 
 	glUseProgram(singleColorShader.id);
-	singleColorShader.setMat4fv("projection", projection);
+	singleColorShader.setMat4fv("uProjection", projection);
 	glUseProgram(singleColorShaderAlpha.id);
-	singleColorShaderAlpha.setMat4fv("projection", projection);
+	singleColorShaderAlpha.setMat4fv("uProjection", projection);
 	glUseProgram(unlitColorShader.id);
 	unlitColorShader.setMat4fv("uProjection", projection);
 
 	glUseProgram(dirLightOnlyShader.id);
 	dirLightOnlyShader.setMat4fv("uProjection", projection);
+	glUseProgram(pointSpriteTestShader.id);
+	pointSpriteTestShader.setMat4fv("uProjection", projection);
 
 	GeneralGrid gGrid(100, 5);
 
@@ -304,6 +314,10 @@ int runApp() {
 		glEnable(GL_TEXTURE_2D);
 		glEnable(GL_TEXTURE_1D);
 		glEnable(GL_TEXTURE_3D);
+
+		glEnable(GL_MULTISAMPLE);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		//cout << "frame " << frameCounter++ << endl;
 
@@ -343,7 +357,7 @@ int runApp() {
 		view = camera->getViewMatrix();
 
 		glUseProgram(singleColorShader.id);
-		singleColorShader.setMat4fv("view", view);
+		singleColorShader.setMat4fv("uView", view);
 		//singleColorShader.setMat4fv("projection", projection);
 
 		glUseProgram(unlitColorShader.id);
@@ -356,7 +370,10 @@ int runApp() {
 		//unlitColorShader.setMat4fv("uProjection", projection);
 
 		glUseProgram(singleColorShaderAlpha.id);
-		singleColorShaderAlpha.setMat4fv("view", view);
+		singleColorShaderAlpha.setMat4fv("uView", view);
+
+		glUseProgram(pointSpriteTestShader.id);
+		pointSpriteTestShader.setMat4fv("uView", view);
 
 
 		grid->draw(singleColorShader);
@@ -364,8 +381,11 @@ int runApp() {
 		lbm->draw(singleColorShader);
 
 
-
-		particleSystem->draw(singleColorShader, useCUDA);
+		if (usePointSprites) {
+			particleSystem->draw(pointSpriteTestShader, useCUDA);
+		} else {
+			particleSystem->draw(singleColorShader, useCUDA);
+		}
 
 		//grid.draw(singleColorShaderAlpha);
 
@@ -541,7 +561,7 @@ void constructUserInterface(nk_context *ctx, nk_colorf &bg) {
 	nk_glfw3_new_frame();
 
 	/* GUI */
-	if (nk_begin(ctx, "Control Panel", nk_rect(50, 50, 230, 250),
+	if (nk_begin(ctx, "Control Panel", nk_rect(50, 50, 275, 350),
 				 NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
 				 NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
 		enum { EASY, HARD };
@@ -573,6 +593,19 @@ void constructUserInterface(nk_context *ctx, nk_colorf &bg) {
 		//nk_label(ctx, "(CHANGING THIS VALUE AT RUNTIME IS EXTREMELY UNSTABLE)", NK_TEXT_LEFT);
 		nk_property_float(ctx, "Tau:", 0.5005f, &lbm->tau, 2.0f, 0.005f, 0.005f);
 		//cout << "tau set to " << lbm->tau << endl;
+
+
+		nk_layout_row_dynamic(ctx, 15, 1);
+		nk_checkbox_label(ctx, "Use subgrid model", &lbm->useSubgridModel);
+
+
+		nk_layout_row_dynamic(ctx, 15, 1);
+		nk_label(ctx, "Use point sprites", NK_TEXT_LEFT);
+		nk_checkbox_label(ctx, "Use point sprites", &usePointSprites);
+
+		nk_layout_row_dynamic(ctx, 10, 1);
+		nk_labelf(ctx, NK_TEXT_LEFT, "Point size");
+		nk_slider_int(ctx, 1, &particleSystem->pointSize, 100, 1);
 
 		nk_layout_row_dynamic(ctx, 20, 1);
 		nk_label(ctx, "Particles Color:", NK_TEXT_LEFT);

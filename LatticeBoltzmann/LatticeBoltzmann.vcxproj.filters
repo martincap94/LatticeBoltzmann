@@ -104,6 +104,9 @@
     <ClCompile Include="nuklear\style.c">
       <Filter>Source Files\nuklear_examples</Filter>
     </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Grid2D.h">
@@ -157,6 +160,9 @@
     <ClInclude Include="nuklear_glfw_gl4.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="singleColor.vert">
@@ -178,6 +184,12 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="dirLightOnly.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="pointSpriteTest.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="pointSpriteTest.vert">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

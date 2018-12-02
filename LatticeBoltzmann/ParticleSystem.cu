@@ -2,8 +2,6 @@
 
 #include <cuda_runtime.h>
 
-#define PARTICLES_3D
-
 ParticleSystem::ParticleSystem() {
 }
 
@@ -45,6 +43,10 @@ ParticleSystem::ParticleSystem(int numParticles, bool drawStreamlines) : numPart
 	}
 
 
+	testTexture.loadTexture("textures/pointTex.png");
+
+
+
 
 }
 
@@ -62,8 +64,11 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 
 	glUseProgram(shader.id);
 
-	glPointSize(2.0f);
-	shader.setVec3("color", particlesColor);
+	glActiveTexture(GL_TEXTURE0 + 0);
+	glBindTexture(GL_TEXTURE_2D, testTexture.id);
+
+	glPointSize(pointSize);
+	shader.setVec3("uColor", particlesColor);
 
 	glBindVertexArray(vao);
 
@@ -77,7 +82,7 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 	if (drawStreamlines) {
 
 		glPointSize(1.0f);
-		shader.setVec4("color", glm::vec4(0.0f, 0.4f, 1.0f, 1.0f));
+		shader.setVec4("uColor", glm::vec4(0.0f, 0.4f, 1.0f, 1.0f));
 
 		glBindVertexArray(streamLinesVAO);
 
@@ -87,6 +92,7 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 		glDrawArrays(GL_POINTS, 0, numParticles  * MAX_STREAMLINE_LENGTH);
 	}
 
+	//glBindTexture()
 
 }
 

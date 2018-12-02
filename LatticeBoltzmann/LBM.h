@@ -17,6 +17,8 @@ public:
 	float itau;
 	float nu;
 
+	int useSubgridModel = 0;
+
 	string sceneFilename;
 
 	LBM();

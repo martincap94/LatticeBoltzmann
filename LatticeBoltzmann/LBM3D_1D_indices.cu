@@ -979,13 +979,13 @@ void LBM3D_1D_indices::draw(ShaderProgram & shader) {
 	//glBindVertexArray(colliderVAO);
 
 	//glPointSize(8.0f);
-	//shader.setVec3("color", glm::vec3(1.0f, 1.0f, 1.0f));
+	//shader.setVec3("uColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
 	//glDrawArrays(GL_POINTS, 0, colliderVertices.size());
 
 
 #ifdef DRAW_VELOCITY_ARROWS
-	shader.setVec3("color", glm::vec3(0.2f, 0.3f, 1.0f));
+	shader.setVec3("uColor", glm::vec3(0.2f, 0.3f, 1.0f));
 	glBindVertexArray(velocityVAO);
 	glBindBuffer(GL_ARRAY_BUFFER, velocityVBO);
 
@@ -995,7 +995,7 @@ void LBM3D_1D_indices::draw(ShaderProgram & shader) {
 
 
 #ifdef DRAW_PARTICLE_VELOCITY_ARROWS
-	shader.setVec3("color", glm::vec3(0.8f, 1.0f, 0.6f));
+	shader.setVec3("uColor", glm::vec3(0.8f, 1.0f, 0.6f));
 
 	glBindVertexArray(particleArrowsVAO);
 
@@ -1321,7 +1321,7 @@ void LBM3D_1D_indices::collisionStep() {
 				float bottomLeftEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
-				if (true) {
+				if (useSubgridModel) {
 					// SUBGRID MODEL
 					float tensor[3][3];
 

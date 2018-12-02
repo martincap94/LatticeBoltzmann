@@ -6,6 +6,8 @@
 #include <vector>
 #include <deque>
 
+#include "Texture.h"
+
 class ParticleSystem {
 public:
 
@@ -15,9 +17,11 @@ public:
 
 	bool drawStreamlines = false;
 
+	int pointSize = 2;
+
 	glm::vec3 particlesColor = glm::vec3(1.0f, 0.4f, 1.0f);
 
-
+	Texture testTexture;
 
 	glm::vec3 *particleVertices;
 	//vector<glm::vec3> particleVerticesVector;
