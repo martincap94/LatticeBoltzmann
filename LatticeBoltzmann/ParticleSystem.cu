@@ -63,7 +63,7 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 	glUseProgram(shader.id);
 
 	glPointSize(2.0f);
-	shader.setVec4("color", particlesColor);
+	shader.setVec3("color", particlesColor);
 
 	glBindVertexArray(vao);
 

@@ -505,7 +505,6 @@ void LBM2D_1D_indices::resetSimulation() {
 	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_backLattice, backLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 #endif
 
 }

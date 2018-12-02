@@ -196,7 +196,7 @@ int runApp() {
 	bg.r = particleSystem->particlesColor.r;
 	bg.g = particleSystem->particlesColor.g;
 	bg.b = particleSystem->particlesColor.b;
-	bg.a = particleSystem->particlesColor.a;
+	//bg.a = particleSystem->particlesColor.a;
 
 
 	//HeightMap heightMap(HEIGHTMAP_FILENAME, nullptr); // temporary fix, no need to load for 2D
@@ -298,6 +298,13 @@ int runApp() {
 
 	while (!glfwWindowShouldClose(window)) {
 
+		// enable flags because of nuklear
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_LIGHTING);
+		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_TEXTURE_1D);
+		glEnable(GL_TEXTURE_3D);
+
 		//cout << "frame " << frameCounter++ << endl;
 
 		float currentFrameTime = glfwGetTime();
@@ -358,7 +365,7 @@ int runApp() {
 
 
 
-		particleSystem->draw(singleColorShaderAlpha, useCUDA);
+		particleSystem->draw(singleColorShader, useCUDA);
 
 		//grid.draw(singleColorShaderAlpha);
 
@@ -578,7 +585,7 @@ void constructUserInterface(nk_context *ctx, nk_colorf &bg) {
 			bg.g = nk_propertyf(ctx, "#G:", 0, bg.g, 1.0f, 0.01f, 0.005f);
 			bg.b = nk_propertyf(ctx, "#B:", 0, bg.b, 1.0f, 0.01f, 0.005f);
 			bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f, 0.005f);
-			particleSystem->particlesColor = glm::vec4(bg.r, bg.g, bg.b, bg.a);
+			particleSystem->particlesColor = glm::vec3(bg.r, bg.g, bg.b);
 			nk_combo_end(ctx);
 		}
 	}

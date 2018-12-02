@@ -1890,6 +1890,20 @@ void LBM3D_1D_indices::updateColliders() {
 }
 
 void LBM3D_1D_indices::resetSimulation() {
+	cout << "Resetting simulation..." << endl;
+	particleSystem->initParticlePositions(latticeWidth, latticeHeight, latticeDepth);
+	for (int i = 0; i < latticeWidth * latticeHeight; i++) {
+		for (int j = 0; j < 19; j++) {
+			backLattice[i].adj[j] = 0.0f;
+		}
+		velocities[i] = glm::vec3(0.0f);
+	}
+	initLattice();
+#ifdef USE_CUDA
+	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node3D) * latticeSize, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_backLattice, backLattice, sizeof(Node3D) * latticeSize, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec3) * latticeSize, cudaMemcpyHostToDevice);
+#endif
 }
 
 void LBM3D_1D_indices::initBuffers() {

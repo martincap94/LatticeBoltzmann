@@ -5,7 +5,7 @@ LBM_type: 3D
 VSync: 0
 
 
-scene_filename: 100x100_02.ppm
+scene_filename: 60x40_05.ppm
 
 // Whether to use CUDA (otherwise single-thread CPU implementation will be used) - this may be better used as define, since it will be faster
 use_CUDA: true
