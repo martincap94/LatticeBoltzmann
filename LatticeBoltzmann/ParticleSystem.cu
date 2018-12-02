@@ -55,7 +55,7 @@ ParticleSystem::~ParticleSystem() {
 	if (streamLines != nullptr) {
 		delete[] streamLines;
 	}
-	cudaFree(d_numParticles);
+	//cudaFree(d_numParticles);
 }
 
 void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
@@ -63,7 +63,7 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 	glUseProgram(shader.id);
 
 	glPointSize(2.0f);
-	shader.setVec4("color", glm::vec4(1.0f, 0.4f, 1.0f, 1.0f));
+	shader.setVec4("color", particlesColor);
 
 	glBindVertexArray(vao);
 

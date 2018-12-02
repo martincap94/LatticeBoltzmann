@@ -35,7 +35,24 @@
 #include "DirectionalLight.h"
 #include "Grid.h"
 
-#include <vld.h>
+//#include <vld.h>
+
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_IMPLEMENTATION
+#define NK_GLFW_GL3_IMPLEMENTATION
+#define NK_KEYSTATE_BASED_INPUT
+#include <nuklear.h>
+#include "nuklear_glfw_gl3.h"
+
+#define MAX_VERTEX_BUFFER 512 * 1024
+#define MAX_ELEMENT_BUFFER 128 * 1024
+
 
 int runApp();
 void processInput(GLFWwindow* window);
@@ -43,6 +60,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void loadConfigFile();
 void saveConfigParam(string param, string val);
+void constructUserInterface(nk_context *ctx, nk_colorf &bg);
 
 enum LBMType {
 	LBM2D,
@@ -62,6 +80,7 @@ int vsync = 0;
 int numParticles = 1000; // default value
 string sceneFilename;
 bool useCUDA = true;
+int useCUDACheckbox = 1;
 
 float deltaTime = 0.0f;
 float lastFrameTime;
@@ -83,6 +102,7 @@ float tau = 0.52f;
 
 bool drawStreamlines = false;
 
+int paused = 0;
 
 
 
@@ -91,7 +111,7 @@ int main(int argc, char **argv) {
 
 	runApp();
 
-
+	return 0;
 }
 
 int runApp() {
@@ -142,9 +162,42 @@ int runApp() {
 
 	float aspectRatio = screenWidth / screenHeight;
 
+	struct nk_context *ctx = nk_glfw3_init(window, NK_GLFW3_INSTALL_CALLBACKS);
 
+	{
+		struct nk_font_atlas *atlas;
+		nk_glfw3_font_stash_begin(&atlas);
+		/*struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/DroidSans.ttf", 14, 0);*/
+		struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/Roboto-Regular.ttf", 14, 0);
+		/*struct nk_font *future = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/kenvector_future_thin.ttf", 13, 0);*/
+		/*struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/ProggyClean.ttf", 12, 0);*/
+		/*struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/ProggyTiny.ttf", 10, 0);*/
+		/*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/Cousine-Regular.ttf", 13, 0);*/
+		nk_glfw3_font_stash_end();
+		nk_style_load_all_cursors(ctx, atlas->cursors);
+		//nk_style_set_font(ctx, &droid->handle);
+		nk_style_set_font(ctx, &roboto->handle);
+	}
+
+#ifdef INCLUDE_STYLE
+	/*set_style(ctx, THEME_WHITE);*/
+	/*set_style(ctx, THEME_RED);*/
+	/*set_style(ctx, THEME_BLUE);*/
+	/*set_style(ctx, THEME_DARK);*/
+#endif
+	struct nk_colorf bg;
+	//bg.r = 0.1f;
+	//bg.g = 0.18f;
+	//bg.b = 0.24f;
+	//bg.a = 1.0f;
 
 	particleSystem = new ParticleSystem(numParticles, drawStreamlines);
+
+	bg.r = particleSystem->particlesColor.r;
+	bg.g = particleSystem->particlesColor.g;
+	bg.b = particleSystem->particlesColor.b;
+	bg.a = particleSystem->particlesColor.a;
+
 
 	//HeightMap heightMap(HEIGHTMAP_FILENAME, nullptr); // temporary fix, no need to load for 2D
 	//HeightMap heightMap(sceneFilename, nullptr); // temporary fix, no need to load for 2D
@@ -262,17 +315,21 @@ int runApp() {
 
 		//glClearColor(0.1f, 0.4f, 0.4f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
+
 
 
 		glfwPollEvents();
+
 		processInput(window);
 
+		constructUserInterface(ctx, bg);
 
-		if (useCUDA) {
-			lbm->doStepCUDA();
-		} else {
-			lbm->doStep();
+		if (!paused) {
+			if (useCUDA) {
+				lbm->doStepCUDA();
+			} else {
+				lbm->doStep();
+			}
 		}
 
 
@@ -281,7 +338,7 @@ int runApp() {
 		glUseProgram(singleColorShader.id);
 		singleColorShader.setMat4fv("view", view);
 		//singleColorShader.setMat4fv("projection", projection);
-		
+
 		glUseProgram(unlitColorShader.id);
 		unlitColorShader.setMat4fv("uView", view);
 
@@ -311,6 +368,8 @@ int runApp() {
 		//camera.printInfo();
 
 
+		nk_glfw3_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
+		lbm->recalculateVariables();
 
 		glfwSwapBuffers(window);
 
@@ -321,9 +380,10 @@ int runApp() {
 	delete camera;
 	delete particleSystem;
 
+	nk_glfw3_shutdown();
 	glfwTerminate();
 	return 0;
-}
+	}
 
 
 
@@ -355,7 +415,7 @@ void processInput(GLFWwindow* window) {
 	}
 	if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
 		camera->setView(Camera::VIEW_SIDE);
-	}	
+	}
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 		camera->setView(Camera::VIEW_TOP);
 	}
@@ -410,7 +470,7 @@ void loadConfigFile() {
 		// delete whitespace
 		line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
 
-		
+
 		string param = line.substr(0, idx);
 		string val = line.substr(idx + 1, line.length() - 1);
 
@@ -458,11 +518,71 @@ void saveConfigParam(string param, string val) {
 		latticeDepth = stoi(val);
 	} else if (param == "use_CUDA") {
 		useCUDA = (val == "true") ? true : false;
+		useCUDACheckbox = (int)useCUDA;
 	} else if (param == "tau") {
 		tau = stof(val);
 	} else if (param == "draw_streamlines") {
 		drawStreamlines = (val == "true") ? true : false;
+	} else if (param == "autoplay") {
+		paused = (val == "true") ? 0 : 1;
 	}
+
+
+}
+
+void constructUserInterface(nk_context *ctx, nk_colorf &bg) {
+	nk_glfw3_new_frame();
+
+	/* GUI */
+	if (nk_begin(ctx, "Control Panel", nk_rect(50, 50, 230, 250),
+				 NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
+				 NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
+		enum { EASY, HARD };
+		static int op = EASY;
+		static int property = 20;
+		nk_layout_row_static(ctx, 30, 80, 1);
+		if (nk_button_label(ctx, "Reset")) {
+			//fprintf(stdout, "button pressed\n");
+			lbm->resetSimulation();
+		}
+		const char *buttonDescription = paused ? "Play" : "Pause";
+		if (nk_button_label(ctx, buttonDescription)) {
+			paused = !paused;
+		}
+
+
+
+		nk_layout_row_dynamic(ctx, 15, 1);
+		//if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
+		//if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
+		nk_label_colored_wrap(ctx, "Enabling or disabling CUDA at runtime is highly unstable at the moment, use at your own discretion", nk_rgba_f(1.0f, 0.5f, 0.5f, 1.0f));
+		nk_checkbox_label(ctx, "Use CUDA", &useCUDACheckbox);
+		//cout << (bool)useCUDACheckbox << endl;
+		useCUDA = useCUDACheckbox;
+
+		nk_layout_row_dynamic(ctx, 25, 1);
+		//nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
+
+		//nk_label(ctx, "(CHANGING THIS VALUE AT RUNTIME IS EXTREMELY UNSTABLE)", NK_TEXT_LEFT);
+		nk_property_float(ctx, "Tau:", 0.5005f, &lbm->tau, 2.0f, 0.005f, 0.005f);
+		//cout << "tau set to " << lbm->tau << endl;
+
+		nk_layout_row_dynamic(ctx, 20, 1);
+		nk_label(ctx, "Particles Color:", NK_TEXT_LEFT);
+		nk_layout_row_dynamic(ctx, 25, 1);
+		if (nk_combo_begin_color(ctx, nk_rgb_cf(bg), nk_vec2(nk_widget_width(ctx), 400))) {
+			nk_layout_row_dynamic(ctx, 120, 1);
+			bg = nk_color_picker(ctx, bg, NK_RGBA);
+			nk_layout_row_dynamic(ctx, 25, 1);
+			bg.r = nk_propertyf(ctx, "#R:", 0, bg.r, 1.0f, 0.01f, 0.005f);
+			bg.g = nk_propertyf(ctx, "#G:", 0, bg.g, 1.0f, 0.01f, 0.005f);
+			bg.b = nk_propertyf(ctx, "#B:", 0, bg.b, 1.0f, 0.01f, 0.005f);
+			bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f, 0.005f);
+			particleSystem->particlesColor = glm::vec4(bg.r, bg.g, bg.b, bg.a);
+			nk_combo_end(ctx);
+		}
+	}
+	nk_end(ctx);
 
 
 }

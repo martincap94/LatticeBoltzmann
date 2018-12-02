@@ -10,6 +10,9 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{95ff0a5e-d41b-47d7-a6b6-4576d66be871}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\nuklear_examples">
+      <UniqueIdentifier>{5567cc63-f9fb-4a82-b021-73783e404b0d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="kernel.cu">
@@ -83,6 +86,24 @@
     <ClCompile Include="Config.h">
       <Filter>Header Files</Filter>
     </ClCompile>
+    <ClCompile Include="nuklear_main_gl4.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nuklear_main_gl3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nuklear\calculator.c">
+      <Filter>Source Files\nuklear_examples</Filter>
+    </ClCompile>
+    <ClCompile Include="nuklear\node_editor.c">
+      <Filter>Source Files\nuklear_examples</Filter>
+    </ClCompile>
+    <ClCompile Include="nuklear\overview.c">
+      <Filter>Source Files\nuklear_examples</Filter>
+    </ClCompile>
+    <ClCompile Include="nuklear\style.c">
+      <Filter>Source Files\nuklear_examples</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Grid2D.h">
@@ -128,6 +149,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Grid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nuklear_glfw_gl3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nuklear_glfw_gl4.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

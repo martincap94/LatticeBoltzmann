@@ -12,3 +12,8 @@ LBM::LBM(glm::vec3 dimensions, string sceneFilename, float tau) : latticeWidth(d
 
 LBM::~LBM() {
 }
+
+void LBM::recalculateVariables() {
+	itau = 1.0f / tau;
+	nu = (2.0f * tau - 1.0f) / 6.0f;
+}

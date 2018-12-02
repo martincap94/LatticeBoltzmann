@@ -99,6 +99,9 @@ public:
 	LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem);
 	~LBM2D_1D_indices();
 
+
+	virtual void recalculateVariables();
+
 	virtual void initScene();
 
 	virtual void draw(ShaderProgram &shader);
@@ -117,6 +120,7 @@ public:
 	virtual void updateColliders();
 
 	virtual void resetSimulation();
+
 
 
 private:

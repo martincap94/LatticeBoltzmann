@@ -36,6 +36,8 @@ public:
 	virtual void updateColliders() = 0;
 	virtual void resetSimulation() = 0;
 
+	virtual void recalculateVariables();
+
 
 };
 

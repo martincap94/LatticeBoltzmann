@@ -935,6 +935,12 @@ LBM3D_1D_indices::~LBM3D_1D_indices() {
 
 }
 
+void LBM3D_1D_indices::recalculateVariables() {
+	LBM::recalculateVariables();
+	cudaMemcpyToSymbol(d_tau, &tau, sizeof(float));
+	cudaMemcpyToSymbol(d_itau, &itau, sizeof(float));
+}
+
 void LBM3D_1D_indices::initScene() {
 	testHM = new HeightMap(sceneFilename, latticeHeight, nullptr);
 

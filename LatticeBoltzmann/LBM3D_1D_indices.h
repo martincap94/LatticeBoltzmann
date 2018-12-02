@@ -123,6 +123,9 @@ public:
 	LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem);
 	~LBM3D_1D_indices();
 
+	virtual void recalculateVariables();
+
+
 	virtual void initScene();
 
 	virtual void draw(ShaderProgram &shader);
