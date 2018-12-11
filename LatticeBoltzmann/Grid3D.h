@@ -12,7 +12,7 @@
 
 class Grid3D : public Grid {
 public:
-	Grid3D(int stepX = 1, int stepY = 1, int stepZ = 1);
+	Grid3D(int width, int height, int depth, int stepX = 1, int stepY = 1, int stepZ = 1);
 	~Grid3D();
 
 	virtual void draw(ShaderProgram &shader);

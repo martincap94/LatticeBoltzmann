@@ -41,14 +41,14 @@ void Camera2D::processKeyboardMovement(CameraMovementDirection direction, float 
 	if (direction == DOWN) {
 		position -= up * velocity;
 	}
-	if (direction == ROTATE_LEFT) {
-		yaw -= velocity;
-		updateCameraVectors();
-	}
-	if (direction == ROTATE_RIGHT) {
-		yaw += velocity;
-		updateCameraVectors();
-	}
+	//if (direction == ROTATE_LEFT) {
+	//	yaw -= velocity;
+	//	updateCameraVectors();
+	//}
+	//if (direction == ROTATE_RIGHT) {
+	//	yaw += velocity;
+	//	updateCameraVectors();
+	//}
 	/*if (direction == ROTATE_LEFT) {
 		yaw -= velocity;
 		updateCameraVectors();

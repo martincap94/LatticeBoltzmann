@@ -137,10 +137,11 @@ public:
 	virtual void collisionStep();
 	virtual void moveParticles();
 	virtual void updateInlets();
-	void updateInlets(Node3D *lattice);
 	virtual void updateColliders();
 
 	virtual void resetSimulation();
+
+	virtual void updateControlProperty(eLBMControlProperty controlProperty);
 
 
 
@@ -152,9 +153,6 @@ private:
 	int getIdx(int x, int y, int z) {
 		return (x + latticeWidth * (y + latticeHeight * z));
 	}
-
-	GLuint colliderVAO;
-	GLuint colliderVBO;
 
 	GLuint velocityVBO;
 	GLuint velocityVAO;
@@ -170,8 +168,6 @@ private:
 
 	void initBuffers();
 	void initLattice();
-	void initColliders();
-	void initParticleSystem();
 
 	void swapLattices();
 

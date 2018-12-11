@@ -19,21 +19,19 @@ public:
 
 	int pointSize = 2;
 
-	glm::vec3 particlesColor = glm::vec3(1.0f, 0.4f, 1.0f);
+	glm::vec3 particlesColor = glm::vec3(0.8f, 0.8f, 0.8f);
 
-	Texture testTexture;
+	Texture spriteTexture;
 
-	glm::vec3 *particleVertices;
-	//vector<glm::vec3> particleVerticesVector;
-	//vector<deque<glm::vec3>> streamLines;
-	glm::vec3 *streamLines;
+	glm::vec3 *particleVertices = nullptr;
+	glm::vec3 *streamLines = nullptr;
 
 	ParticleSystem();
 	ParticleSystem(int numParticles, bool drawStreamlines);
 	~ParticleSystem();
 
 	void draw(const ShaderProgram &shader, bool useCUDA);
-	void initParticlePositions(int width, int height);
+	void initParticlePositions(int width, int height, bool *collider);
 	void initParticlePositions(int width, int height, int depth);
 
 
@@ -41,7 +39,6 @@ public:
 
 private:
 
-	//GLuint vbo;
 	GLuint vao;
 
 	GLuint streamLinesVAO;

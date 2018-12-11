@@ -12,8 +12,15 @@
 
 __constant__ int d_latticeWidth;
 __constant__ int d_latticeHeight;
+__constant__ int d_latticeSize;
 __constant__ float d_tau;
 __constant__ float d_itau;
+__constant__ int d_mirrorSides;
+
+__device__ int d_respawnIndex = 0;
+__constant__ int d_respawnMinY;
+__constant__ int d_respawnMaxY;
+
 
 
 __device__ int getIdxKernel(int x, int y) {
@@ -95,22 +102,53 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *
 
 		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
 			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1) {
-#ifdef MIRROR_SIDES
-			if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1) {
-				//particleVertices[idx] = glm::vec3(0, respawnIdx++, 0.0f);
-				particleVertices[idx].x = 0.0f;
+			if (d_mirrorSides) {
+				if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1) {
+					//particleVertices[idx] = glm::vec3(0, d_respawnIndex++, 0.0f);
+					particleVertices[idx].x = 0.0f;
+					particleVertices[idx].y = d_respawnIndex++;
+					//particleVertices[idx].z = 0.0f;
+					if (d_respawnIndex >= d_respawnMaxY) {
+						d_respawnIndex = d_respawnMinY;
+					}
+				} else {
+					//particleVertices[idx] = glm::vec3(x, (int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1), 0.0f);
+					particleVertices[idx].x = x;
+					particleVertices[idx].y = (int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1);
+					//particleVertices[idx].z = 0.0f;
+				}
 				//particleVertices[idx].z = 0.0f;
 			} else {
-				//particleVertices[i] = glm::vec3(particleVertices[i].x, (int)(particleVertices[i].y + d_latticeHeight - 1) % (d_latticeHeight - 1), 0.0f);
-				particleVertices[idx].y = (float)((int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1));
+				//particleVertices[idx] = glm::vec3(0, respawnIndex++, 0.0f);
+				particleVertices[idx].x = 0.0f;
+				particleVertices[idx].y = d_respawnIndex++;
 				//particleVertices[idx].z = 0.0f;
+				if (d_respawnIndex >= d_respawnMaxY) {
+					d_respawnIndex = d_respawnMinY;
+				}
 			}
-#else
-			//particleVertices[i] = glm::vec3(0, respawnIdx++, 0.0f);
-			particleVertices[idx].x = 0.0f;
 			particleVertices[idx].z = 0.0f;
-#endif
 		}
+
+		//if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
+		//	particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1) {
+		//	if (d_mirrorSides) {
+		//		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1) {
+		//			//particleVertices[idx] = glm::vec3(0, respawnIdx++, 0.0f);
+		//			particleVertices[idx].x = 0.0f;
+		//			//particleVertices[idx].z = 0.0f;
+		//		} else {
+		//			//particleVertices[i] = glm::vec3(particleVertices[i].x, (int)(particleVertices[i].y + d_latticeHeight - 1) % (d_latticeHeight - 1), 0.0f);
+		//			particleVertices[idx].y = (float)((int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1));
+		//			//particleVertices[idx].z = 0.0f;
+		//		}
+		//	} else {
+		//		//particleVertices[i] = glm::vec3(0, respawnIdx++, 0.0f);
+		//		particleVertices[idx].x = 0.0f;
+		//		particleVertices[idx].z = 0.0f;
+
+		//	}
+		//}
 
 		idx += blockDim.x * gridDim.x;
 
@@ -122,7 +160,7 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *
 
 __global__ void clearBackLatticeKernel(Node *backLattice) {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
-	if (idx < d_latticeWidth * d_latticeHeight) {
+	if (idx < d_latticeSize) {
 		for (int i = 0; i < 9; i++) {
 			backLattice[idx].adj[i] = 0.0f;
 		}
@@ -133,7 +171,7 @@ __global__ void streamingStepKernel(Node *backLattice, Node *frontLattice) {
 
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
 
-	if (idx < d_latticeWidth * d_latticeHeight) {
+	if (idx < d_latticeSize) {
 
 		int x = idx % d_latticeWidth;
 		int y = (idx / d_latticeWidth) % d_latticeHeight;
@@ -266,7 +304,7 @@ __global__ void updateInletsKernel(Node *lattice) {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
 	int x = idx % d_latticeWidth;
 
-	if (x == 0 && idx < d_latticeWidth * d_latticeHeight) {
+	if (x == 0 && idx < d_latticeSize) {
 
 		lattice[idx].adj[DIR_MIDDLE] = middleEq;
 		lattice[idx].adj[DIR_RIGHT] = rightEq;
@@ -293,7 +331,7 @@ __global__ void updateCollidersKernel(Node *backLattice, bool *tCol) {
 
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
 
-	if (idx < d_latticeWidth * d_latticeHeight) {
+	if (idx < d_latticeSize) {
 		if (tCol[idx]) {
 
 			float right = backLattice[idx].adj[DIR_RIGHT];
@@ -329,7 +367,7 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 	__shared__ Node cache[BLOCK_DIM];
 
 
-	if (idx < d_latticeWidth * d_latticeHeight) {
+	if (idx < d_latticeSize) {
 
 		cache[cacheIdx] = backLattice[idx];
 
@@ -464,15 +502,16 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 	backLattice = new Node[latticeWidth * latticeHeight]();
 	velocities = new glm::vec2[latticeWidth * latticeHeight]();
 
-	//cudaMallocPitch((void**)&d_frontLattice, &frontLatticePitch, latticeWidth, latticeHeight);
 	cudaMalloc((void**)&d_frontLattice, sizeof(Node) * latticeWidth * latticeHeight);
 	cudaMalloc((void**)&d_backLattice, sizeof(Node) * latticeWidth * latticeHeight);
 	cudaMalloc((void**)&d_velocities, sizeof(glm::vec2) * latticeWidth * latticeHeight);
 
 	cudaMemcpyToSymbol(d_latticeWidth, &latticeWidth, sizeof(int));
 	cudaMemcpyToSymbol(d_latticeHeight, &latticeHeight, sizeof(int));
+	cudaMemcpyToSymbol(d_latticeSize, &latticeSize, sizeof(int));
 	cudaMemcpyToSymbol(d_tau, &tau, sizeof(float));
 	cudaMemcpyToSymbol(d_itau, &itau, sizeof(float));
+	cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
 
 
 
@@ -483,17 +522,15 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 	initLattice();
 	//updateInlets(frontLattice);
 
-#ifdef USE_CUDA
 	cudaMemcpy(d_backLattice, backLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
-#endif
 
 }
 
 void LBM2D_1D_indices::resetSimulation() {
 	cout << "Resetting simulation..." << endl;
-	particleSystem->initParticlePositions(latticeWidth, latticeHeight);
+	particleSystem->initParticlePositions(latticeWidth, latticeHeight, tCol->area);
 	for (int i = 0; i < latticeWidth * latticeHeight; i++) {
 		for (int j = 0; j < 9; j++) {
 			backLattice[i].adj[j] = 0.0f;
@@ -501,11 +538,19 @@ void LBM2D_1D_indices::resetSimulation() {
 		velocities[i] = glm::vec3(0.0f);
 	}
 	initLattice();
-#ifdef USE_CUDA
+
 	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_backLattice, backLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
-#endif
+
+}
+
+void LBM2D_1D_indices::updateControlProperty(eLBMControlProperty controlProperty) {
+	switch (controlProperty) {
+		case MIRROR_SIDES_PROP:
+			cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
+			break;
+	}
 
 }
 
@@ -536,10 +581,13 @@ void LBM2D_1D_indices::recalculateVariables() {
 
 void LBM2D_1D_indices::initScene() {
 	tCol = new LatticeCollider(sceneFilename);
+
 	latticeWidth = tCol->width;
 	latticeHeight = tCol->height;
 	latticeDepth = 1;
 	latticeSize = latticeWidth * latticeHeight;
+
+	precomputeRespawnRange();
 
 	cudaMalloc((void**)&d_tCol, sizeof(bool) * latticeWidth * latticeHeight);
 	cudaMemcpy(d_tCol, &tCol->area[0], sizeof(bool) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
@@ -548,7 +596,7 @@ void LBM2D_1D_indices::initScene() {
 	particleVertices = particleSystem->particleVertices;
 	d_numParticles = particleSystem->d_numParticles;
 
-	particleSystem->initParticlePositions(latticeWidth, latticeHeight);
+	particleSystem->initParticlePositions(latticeWidth, latticeHeight, tCol->area);
 
 
 	//cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * particleSystem->numParticles);
@@ -559,12 +607,12 @@ void LBM2D_1D_indices::initScene() {
 }
 
 void LBM2D_1D_indices::draw(ShaderProgram &shader) {
-	glPointSize(0.4f);
-	shader.setVec3("uColor", glm::vec3(0.4f, 0.4f, 0.1f));
-	glUseProgram(shader.id);
+	//glPointSize(0.4f);
+	//shader.setVec3("uColor", glm::vec3(0.4f, 0.4f, 0.1f));
+	//glUseProgram(shader.id);
 
-	glBindVertexArray(vao);
-	glDrawArrays(GL_POINTS, 0, latticeWidth * latticeHeight);
+	//glBindVertexArray(vao);
+	//glDrawArrays(GL_POINTS, 0, latticeWidth * latticeHeight);
 
 
 	//cout << "Velocity arrows size = " << velocityArrows.size() << endl;
@@ -638,7 +686,6 @@ void LBM2D_1D_indices::doStepCUDA() {
 
 	// ============================================= move particles CUDA - different respawn from CPU !!!
 
-#ifdef USE_INTEROP
 	float3 *dptr;
 	cudaGraphicsMapResources(1, &cuda_vbo_resource, 0);
 	size_t num_bytes;
@@ -648,53 +695,23 @@ void LBM2D_1D_indices::doStepCUDA() {
 	moveParticlesKernelInterop << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (dptr, d_velocities, d_numParticles);
 
 	cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0);
-#else // USE_INTEROP - else
-
-	//moveParticles();
-
-
-	cudaMemcpy(d_particleVertices, particleVertices, sizeof(glm::vec3) * NUM_PARTICLES, cudaMemcpyHostToDevice);
-
-	moveParticlesKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_particleVertices, d_velocities);
-
-	cudaMemcpy(particleVertices, d_particleVertices, sizeof(glm::vec3) * NUM_PARTICLES, cudaMemcpyDeviceToHost);
-
-	for (int i = 0; i < NUM_PARTICLES; i++) {
-
-		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
-			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1) {
-#ifdef MIRROR_SIDES
-			if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
-				particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
-				if (respawnIndex >= latticeHeight - 1) {
-					respawnIndex = 0;
-				}
-			} else {
-				particleVertices[i] = glm::vec3(particleVertices[i].x, (int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1), 0.0f);
-			}
-#else
-			particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
-			if (respawnIndex >= latticeHeight - 1) {
-				respawnIndex = 0;
-			}
-#endif
-		}
-	}
-
-#endif // USE_INTEROP
-
 
 	swapLattices();
 }
 
 void LBM2D_1D_indices::clearBackLattice() {
-	for (int x = 0; x < latticeWidth; x++) {
-		for (int y = 0; y < latticeHeight; y++) {
-			for (int i = 0; i < 9; i++) {
-				backLattice[getIdx(x, y)].adj[i] = 0.0f;
-			}
+	for (int i = 0; i < latticeSize; i++) {
+		for (int j = 0; j < 9; j++) {
+			backLattice[i].adj[j] = 0.0f;
 		}
 	}
+	//for (int x = 0; x < latticeWidth; x++) {
+	//	for (int y = 0; y < latticeHeight; y++) {
+	//		for (int i = 0; i < 9; i++) {
+	//			backLattice[getIdx(x, y)].adj[i] = 0.0f;
+	//		}
+	//	}
+	//}
 	velocityArrows.clear();
 	particleArrows.clear();
 }
@@ -758,13 +775,6 @@ void LBM2D_1D_indices::collisionStep() {
 
 	for (int x = 0; x < latticeWidth; x++) {
 		for (int y = 0; y < latticeHeight; y++) {
-
-			/*if (x == 0 || x == latticeWidth - 1) {
-				continue;
-			}
-			if (y == 0 || y == latticeHeight - 1) {
-				continue;
-			}*/
 
 
 			float macroDensity = calculateMacroscopicDensity(x, y);
@@ -1071,30 +1081,28 @@ void LBM2D_1D_indices::moveParticles() {
 
 		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
 			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1) {
-#ifdef MIRROR_SIDES
-			if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
-				particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
-				if (respawnIndex >= latticeHeight - 1) {
-					respawnIndex = 0;
+			if (mirrorSides) {
+				if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
+					particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
+					if (respawnIndex >= respawnMaxY) {
+						respawnIndex = respawnMinY;
+					}
+				} else {
+					particleVertices[i] = glm::vec3(x, (int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1), 0.0f);
 				}
 			} else {
-				particleVertices[i] = glm::vec3(x, (int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1), 0.0f);
+				particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
+				if (respawnIndex >= respawnMaxY) {
+					respawnIndex = respawnMinY;
+				}
 			}
 
-#else
-			particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
-			if (respawnIndex >= latticeHeight - 1) {
-				respawnIndex = 0;
-			}
-#endif
 			if (particleSystem->drawStreamlines) {
 				for (int k = 0; k < MAX_STREAMLINE_LENGTH; k++) {
 					particleSystem->streamLines[i * MAX_STREAMLINE_LENGTH + k] = particleVertices[i];
 				}
 			}
-
 		}
-
 	}
 	streamLineCounter++;
 	if (streamLineCounter > MAX_STREAMLINE_LENGTH) {
@@ -1409,10 +1417,39 @@ void LBM2D_1D_indices::initLattice() {
 
 }
 
-void LBM2D_1D_indices::initTestCollider() {
-	tCol = new LatticeCollider(sceneFilename);
+void LBM2D_1D_indices::precomputeRespawnRange() {
 
-	cudaMemcpy(d_tCol, &tCol->area[0], sizeof(bool) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+	respawnMinY = 0;
+	respawnMaxY = latticeHeight;
+	bool minSet = false;
+	bool maxSet = false;
+
+	for (int y = 0; y < latticeHeight; y++) {
+		if (!minSet && !tCol->area[latticeWidth * y]) {
+			respawnMinY = y;
+			minSet = true;
+		}
+		if (minSet && tCol->area[latticeWidth * y]) {
+			respawnMaxY = y - 1;
+			maxSet;
+			break;
+		}
+	}
+	if (!minSet && !maxSet) {
+		cerr << "The left wall of the scene is completely blocked off! Inlet incorrect" << endl;
+		exit(-1);
+	}
+	if (!maxSet) {
+		respawnMaxY = latticeHeight - 1;
+	}
+	cout << " || min respawn y = " << respawnMinY << ", max respawn y = " << respawnMaxY << endl;
+
+	respawnIndex = respawnMinY;
+
+	cudaMemcpyToSymbol(d_respawnIndex, &respawnIndex, sizeof(int));
+	cudaMemcpyToSymbol(d_respawnMinY, &respawnMinY, sizeof(int));
+	cudaMemcpyToSymbol(d_respawnMaxY, &respawnMaxY, sizeof(int));
+
 
 }
 

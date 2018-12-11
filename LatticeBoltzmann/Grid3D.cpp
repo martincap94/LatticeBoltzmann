@@ -1,7 +1,7 @@
 #include "Grid3D.h"
 
 
-Grid3D::Grid3D(int stepX, int stepY, int stepZ) {
+Grid3D::Grid3D(int width, int height, int depth, int stepX, int stepY, int stepZ) {
 
 	//for (int z = 0; z < GRID_DEPTH; z += stepZ) {
 	//	for (int x = 0; x < GRID_WIDTH; x += stepX) {
@@ -59,9 +59,9 @@ Grid3D::Grid3D(int stepX, int stepY, int stepZ) {
 
 	bData.clear();
 
-	float gw = GRID_WIDTH - 1;
-	float gh = GRID_HEIGHT - 1;
-	float gd = GRID_DEPTH - 1;
+	float gw = width - 1;
+	float gh = height - 1;
+	float gd = depth - 1;
 	bData.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
 	bData.push_back(glm::vec3(gw, 0.0f, 0.0f));
 
@@ -116,16 +116,17 @@ void Grid3D::draw(ShaderProgram &shader) {
 
 	glUseProgram(shader.id);
 
-	glLineWidth(1.0f);
-	shader.setVec3("uColor", glm::vec3(0.1f, 0.1f, 0.1f));
-	glBindVertexArray(VAO);
-	glDrawArrays(GL_LINES, 0, gridVertices.size());
+	//glLineWidth(1.0f);
+	//shader.setVec3("uColor", glm::vec3(0.1f, 0.1f, 0.1f));
+	//glBindVertexArray(VAO);
+	//glDrawArrays(GL_LINES, 0, gridVertices.size());
 
-	glPointSize(1.0f);
-	shader.setVec3("uColor", glm::vec3(0.4f, 0.4f, 0.1f));
+	//glPointSize(1.0f);
+	//shader.setVec3("uColor", glm::vec3(0.4f, 0.4f, 0.1f));
 
-	glBindVertexArray(pointsVAO);
+	/*glBindVertexArray(pointsVAO);
 	glDrawArrays(GL_POINTS, 0, GRID_WIDTH * GRID_HEIGHT * GRID_DEPTH);
+	*/
 
 	glLineWidth(4.0f);
 	shader.setVec3("uColor", glm::vec3(0.9f, 0.9f, 0.2f));

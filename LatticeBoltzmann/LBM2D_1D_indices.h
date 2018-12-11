@@ -121,6 +121,8 @@ public:
 
 	virtual void resetSimulation();
 
+	virtual void updateControlProperty(eLBMControlProperty controlProperty);
+
 
 
 private:
@@ -135,13 +137,15 @@ private:
 	GLuint particleArrowsVBO;
 
 	int respawnIndex = 0;
+	int respawnMinY;
+	int respawnMaxY;
 
 	int streamLineCounter = 0;
 
 	void initBuffers();
 
 	void initLattice();
-	void initTestCollider();
+	void precomputeRespawnRange();
 
 	int getIdx(int x, int y) {
 		return x + y * latticeWidth;

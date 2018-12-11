@@ -20,7 +20,7 @@ public:
 	//glm::vec2 *gridVertices;
 	vector<glm::vec3> gridVertices;
 
-	Grid2D();
+	Grid2D(int width, int height, int stepX = 1, int stepY = 1);
 	~Grid2D();
 
 	virtual void draw(ShaderProgram &shader);

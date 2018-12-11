@@ -13,7 +13,8 @@ HeightMap::HeightMap(string filename, int latticeHeight, ShaderProgram *shader) 
 
 	if (filename.find(".ppm") == string::npos) {
 		cerr << "Lattice Collider only accepts .ppm files!" << endl;
-		return;
+		exit(-1);
+		//return;
 	}
 	ifstream inFile(filename);
 	string line;
@@ -121,9 +122,6 @@ HeightMap::HeightMap(string filename, int latticeHeight, ShaderProgram *shader) 
 	glBindVertexArray(0);
 
 	numPoints = areaPoints.size();
-
-
-
 
 
 

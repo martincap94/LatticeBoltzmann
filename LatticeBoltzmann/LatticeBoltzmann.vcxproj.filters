@@ -13,6 +13,9 @@
     <Filter Include="Source Files\nuklear_examples">
       <UniqueIdentifier>{5567cc63-f9fb-4a82-b021-73783e404b0d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{9c64076c-816a-4cdb-b3c4-e8041eabcfac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="kernel.cu">
@@ -24,14 +27,14 @@
     <CudaCompile Include="LBM3D_1D_indices.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
-    <CudaCompile Include="DataStructures.cu">
-      <Filter>Source Files</Filter>
-    </CudaCompile>
     <CudaCompile Include="LBM.h">
       <Filter>Header Files</Filter>
     </CudaCompile>
     <CudaCompile Include="ParticleSystem.cu">
       <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="CUDAUtils.cuh">
+      <Filter>Header Files</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -57,9 +60,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ShaderProgram.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DataStructures.h">
@@ -163,6 +163,12 @@
     <ClInclude Include="Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="helper_cuda.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="helper_string.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="singleColor.vert">
@@ -192,5 +198,10 @@
     <None Include="pointSpriteTest.vert">
       <Filter>Shaders</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="config.ini">
+      <Filter>Resources</Filter>
+    </Text>
   </ItemGroup>
 </Project>

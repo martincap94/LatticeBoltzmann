@@ -34,9 +34,11 @@
 #include "ParticleSystem.h"
 #include "DirectionalLight.h"
 #include "Grid.h"
+#include "Utils.h"
 
 //#include <vld.h>
 
+//#define NK_INKLUDE_STYLE
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
@@ -49,6 +51,11 @@
 #define NK_KEYSTATE_BASED_INPUT
 #include <nuklear.h>
 #include "nuklear_glfw_gl3.h"
+
+#define INCLUDE_STYLE
+#ifdef INCLUDE_STYLE
+#include "nuklear/style.c"
+#endif
 
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
@@ -67,14 +74,17 @@ void loadConfigFile();
 void saveConfigParam(string param, string val);
 void constructUserInterface(nk_context *ctx, nk_colorf &bg);
 
-enum LBMType {
-	LBM2D,
-	LBM3D,
-	LBM2D_arr,
-	LBM3D_arr
+enum eShaderProgram {
+
 };
 
-LBMType lbmType;
+
+enum eLBMType {
+	LBM2D,
+	LBM3D
+};
+
+eLBMType lbmType;
 
 LBM *lbm;
 Grid *grid;
@@ -111,6 +121,8 @@ int paused = 0;
 
 int usePointSprites = 0;
 
+bool appRunning = true;
+
 
 
 int main(int argc, char **argv) {
@@ -124,7 +136,6 @@ int main(int argc, char **argv) {
 int runApp() {
 
 	loadConfigFile();
-	//return 1; /////////////////////////////////////////////////////////////////
 
 	glfwInit();
 
@@ -134,12 +145,6 @@ int runApp() {
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
 	glfwWindowHint(GLFW_SAMPLES, 12); // enable MSAA with 4 samples
-
-	//if (lbmType == LBM2D) {
-	//	float ratio = (float)latticeWidth / (float)latticeHeight;
-	//	cout << "RATIO = " << ratio << endl;
-	//	windowHeight /= ratio;
-	//}
 
 	GLFWwindow *window = glfwCreateWindow(windowWidth, windowHeight, "Lattice Boltzmann", nullptr, nullptr);
 
@@ -174,40 +179,24 @@ int runApp() {
 	{
 		struct nk_font_atlas *atlas;
 		nk_glfw3_font_stash_begin(&atlas);
-		/*struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/DroidSans.ttf", 14, 0);*/
 		struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/Roboto-Regular.ttf", 14, 0);
-		/*struct nk_font *future = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/kenvector_future_thin.ttf", 13, 0);*/
-		/*struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/ProggyClean.ttf", 12, 0);*/
-		/*struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/ProggyTiny.ttf", 10, 0);*/
-		/*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "nuklear/extra_font/Cousine-Regular.ttf", 13, 0);*/
 		nk_glfw3_font_stash_end();
 		nk_style_load_all_cursors(ctx, atlas->cursors);
-		//nk_style_set_font(ctx, &droid->handle);
 		nk_style_set_font(ctx, &roboto->handle);
 	}
 
 #ifdef INCLUDE_STYLE
-	/*set_style(ctx, THEME_WHITE);*/
-	/*set_style(ctx, THEME_RED);*/
-	/*set_style(ctx, THEME_BLUE);*/
-	/*set_style(ctx, THEME_DARK);*/
+	set_style(ctx, THEME_MARTIN);
 #endif
-	struct nk_colorf bg;
-	//bg.r = 0.1f;
-	//bg.g = 0.18f;
-	//bg.b = 0.24f;
-	//bg.a = 1.0f;
+
+	struct nk_colorf particlesColor;
 
 	particleSystem = new ParticleSystem(numParticles, drawStreamlines);
 
-	bg.r = particleSystem->particlesColor.r;
-	bg.g = particleSystem->particlesColor.g;
-	bg.b = particleSystem->particlesColor.b;
-	//bg.a = particleSystem->particlesColor.a;
+	particlesColor.r = particleSystem->particlesColor.r;
+	particlesColor.g = particleSystem->particlesColor.g;
+	particlesColor.b = particleSystem->particlesColor.b;
 
-
-	//HeightMap heightMap(HEIGHTMAP_FILENAME, nullptr); // temporary fix, no need to load for 2D
-	//HeightMap heightMap(sceneFilename, nullptr); // temporary fix, no need to load for 2D
 
 	float projWidth;
 
@@ -225,7 +214,7 @@ int runApp() {
 			projWidth = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
 			projection = glm::ortho(-1.0f, projWidth, -1.0f, projWidth, nearPlane, farPlane);
 			//projection = glm::ortho(-1.0f, (float)latticeWidth, -1.0f, (float)latticeHeight, nearPlane, farPlane);
-			grid = new Grid2D();
+			grid = new Grid2D(latticeWidth, latticeHeight, latticeWidth / 100, latticeWidth / 100);
 			camera = new Camera2D(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, 0.0f);
 			break;
 		case LBM3D:
@@ -242,7 +231,7 @@ int runApp() {
 			projectionRange /= 2.0f;
 
 			projection = glm::ortho(-projectionRange, projectionRange, -projectionRange, projectionRange, nearPlane, farPlane);
-			grid = new Grid3D(6, 6, 6);
+			grid = new Grid3D(latticeWidth, latticeHeight, latticeDepth, 6, 6, 6);
 			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 10.0f, glm::vec3(latticeWidth / 2.0f, latticeHeight / 2.0f, latticeDepth / 2.0f));
 			break;
 	}
@@ -261,7 +250,7 @@ int runApp() {
 	}
 
 	DirectionalLight dirLight;
-	dirLight.direction = glm::vec3(1.0f, 45.0f, 1.0f);
+	dirLight.direction = glm::vec3(41.0f, 45.0f, 1.0f);
 	dirLight.ambient = glm::vec3(0.5f);
 	dirLight.diffuse = glm::vec3(1.0f, 0.0f, 0.0f);
 	dirLight.specular = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -306,7 +295,7 @@ int runApp() {
 
 	int totalFrameCounter = 0;
 
-	while (!glfwWindowShouldClose(window)) {
+	while (!glfwWindowShouldClose(window) && appRunning) {
 
 		// enable flags because of nuklear
 		glEnable(GL_DEPTH_TEST);
@@ -334,7 +323,7 @@ int runApp() {
 		//cout << " Delta time = " << (deltaTime * 1000.0f) << " [ms]" << endl;
 		//cout << " Framerate = " << (1.0f / deltaTime) << endl;
 
-		//glClearColor(0.1f, 0.4f, 0.4f, 1.0f);
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
@@ -343,7 +332,7 @@ int runApp() {
 
 		processInput(window);
 
-		constructUserInterface(ctx, bg);
+		constructUserInterface(ctx, particlesColor);
 
 		if (!paused) {
 			if (useCUDA) {
@@ -402,15 +391,29 @@ int runApp() {
 
 	}
 
+	delete particleSystem;
+
 	delete lbm;
 	delete grid;
 	delete camera;
-	delete particleSystem;
 
 	nk_glfw3_shutdown();
 	glfwTerminate();
+
+
+	size_t cudaMemFree = 0;
+	size_t cudaMemTotal = 0;
+
+	cudaMemGetInfo(&cudaMemFree, &cudaMemTotal);
+
+	cout << " FREE CUDA MEMORY  = " << cudaMemFree << endl;
+	cout << " TOTAL CUDA MEMORY = " << cudaMemTotal << endl;
+
+
 	return 0;
-	}
+
+
+}
 
 
 
@@ -432,10 +435,10 @@ void processInput(GLFWwindow* window) {
 		camera->processKeyboardMovement(Camera::RIGHT, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-		camera->processKeyboardMovement(Camera::ROTATE_RIGHT, deltaTime);
+		camera->processKeyboardMovement(Camera::ROTATE_LEFT, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-		camera->processKeyboardMovement(Camera::ROTATE_LEFT, deltaTime);
+		camera->processKeyboardMovement(Camera::ROTATE_RIGHT, deltaTime);
 	}
 	if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
 		camera->setView(Camera::VIEW_FRONT);
@@ -475,6 +478,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	}
 }
 
+
 void loadConfigFile() {
 
 	ifstream infile(CONFIG_FILE);
@@ -493,26 +497,23 @@ void loadConfigFile() {
 		int idx = line.find("//");
 		line = line.substr(0, idx);
 
-		idx = line.find(":");
 		// delete whitespace
-		line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
+		trim(line);
+		//line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
 
+		idx = line.find(":");
 
 		string param = line.substr(0, idx);
 		string val = line.substr(idx + 1, line.length() - 1);
+		trim(param);
+		trim(val);
 
 		//cout << "param = " << param << ", val = " << val << endl;
 		cout << param << ": " << val << endl;
 
 		saveConfigParam(param, val);
 
-
 	}
-
-
-
-
-
 }
 
 void saveConfigParam(string param, string val) {
@@ -522,10 +523,6 @@ void saveConfigParam(string param, string val) {
 			lbmType = LBM2D;
 		} else if (val == "3D") {
 			lbmType = LBM3D;
-		} else if (val == "2D_arr") {
-			lbmType = LBM2D_arr;
-		} else if (val == "3D_arr") {
-			lbmType = LBM3D_arr;
 		}
 	} else if (param == "VSync") {
 		vsync = stoi(val);
@@ -557,7 +554,7 @@ void saveConfigParam(string param, string val) {
 
 }
 
-void constructUserInterface(nk_context *ctx, nk_colorf &bg) {
+void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 	nk_glfw3_new_frame();
 
 	/* GUI */
@@ -567,7 +564,7 @@ void constructUserInterface(nk_context *ctx, nk_colorf &bg) {
 		enum { EASY, HARD };
 		static int op = EASY;
 		static int property = 20;
-		nk_layout_row_static(ctx, 30, 80, 1);
+		nk_layout_row_static(ctx, 30, 80, 3);
 		if (nk_button_label(ctx, "Reset")) {
 			//fprintf(stdout, "button pressed\n");
 			lbm->resetSimulation();
@@ -576,31 +573,48 @@ void constructUserInterface(nk_context *ctx, nk_colorf &bg) {
 		if (nk_button_label(ctx, buttonDescription)) {
 			paused = !paused;
 		}
+		if (nk_button_label(ctx, "EXIT")) {
+			appRunning = false;
+		}
 
 
 
-		nk_layout_row_dynamic(ctx, 15, 1);
-		//if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
-		//if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
+		nk_layout_row_dynamic(ctx, 30, 1);
 		nk_label_colored_wrap(ctx, "Enabling or disabling CUDA at runtime is highly unstable at the moment, use at your own discretion", nk_rgba_f(1.0f, 0.5f, 0.5f, 1.0f));
 		nk_checkbox_label(ctx, "Use CUDA", &useCUDACheckbox);
-		//cout << (bool)useCUDACheckbox << endl;
 		useCUDA = useCUDACheckbox;
 
 		nk_layout_row_dynamic(ctx, 25, 1);
-		//nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
 
-		//nk_label(ctx, "(CHANGING THIS VALUE AT RUNTIME IS EXTREMELY UNSTABLE)", NK_TEXT_LEFT);
 		nk_property_float(ctx, "Tau:", 0.5005f, &lbm->tau, 2.0f, 0.005f, 0.005f);
-		//cout << "tau set to " << lbm->tau << endl;
+
+		int mirrorSidesPrev = lbm->mirrorSides;
+		nk_layout_row_dynamic(ctx, 15, 1);
+		nk_checkbox_label(ctx, "Mirror sides", &lbm->mirrorSides);
+		if (mirrorSidesPrev != lbm->mirrorSides) {
+			cout << "Mirror sides value changed!" << endl;
+			lbm->updateControlProperty(LBM::MIRROR_SIDES_PROP);
+		}
+
+		if (lbmType == LBM3D) {
+			nk_layout_row_dynamic(ctx, 15, 1);
+			nk_checkbox_label(ctx, "Use subgrid model", &lbm->useSubgridModel);
+		}
+
 
 
 		nk_layout_row_dynamic(ctx, 15, 1);
-		nk_checkbox_label(ctx, "Use subgrid model", &lbm->useSubgridModel);
+		//nk_label(ctx, "Use point sprites", NK_TEXT_LEFT);
+		int prevVsync = vsync;
+		nk_checkbox_label(ctx, "VSync", &vsync);
+		if (prevVsync != vsync) {
+			glfwSwapInterval(vsync);
+		}
+
 
 
 		nk_layout_row_dynamic(ctx, 15, 1);
-		nk_label(ctx, "Use point sprites", NK_TEXT_LEFT);
+		//nk_label(ctx, "Use point sprites", NK_TEXT_LEFT);
 		nk_checkbox_label(ctx, "Use point sprites", &usePointSprites);
 
 		nk_layout_row_dynamic(ctx, 10, 1);
@@ -610,15 +624,15 @@ void constructUserInterface(nk_context *ctx, nk_colorf &bg) {
 		nk_layout_row_dynamic(ctx, 20, 1);
 		nk_label(ctx, "Particles Color:", NK_TEXT_LEFT);
 		nk_layout_row_dynamic(ctx, 25, 1);
-		if (nk_combo_begin_color(ctx, nk_rgb_cf(bg), nk_vec2(nk_widget_width(ctx), 400))) {
+		if (nk_combo_begin_color(ctx, nk_rgb_cf(particlesColor), nk_vec2(nk_widget_width(ctx), 400))) {
 			nk_layout_row_dynamic(ctx, 120, 1);
-			bg = nk_color_picker(ctx, bg, NK_RGBA);
+			particlesColor = nk_color_picker(ctx, particlesColor, NK_RGBA);
 			nk_layout_row_dynamic(ctx, 25, 1);
-			bg.r = nk_propertyf(ctx, "#R:", 0, bg.r, 1.0f, 0.01f, 0.005f);
-			bg.g = nk_propertyf(ctx, "#G:", 0, bg.g, 1.0f, 0.01f, 0.005f);
-			bg.b = nk_propertyf(ctx, "#B:", 0, bg.b, 1.0f, 0.01f, 0.005f);
-			bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f, 0.005f);
-			particleSystem->particlesColor = glm::vec3(bg.r, bg.g, bg.b);
+			particlesColor.r = nk_propertyf(ctx, "#R:", 0, particlesColor.r, 1.0f, 0.01f, 0.005f);
+			particlesColor.g = nk_propertyf(ctx, "#G:", 0, particlesColor.g, 1.0f, 0.01f, 0.005f);
+			particlesColor.b = nk_propertyf(ctx, "#B:", 0, particlesColor.b, 1.0f, 0.01f, 0.005f);
+			particlesColor.a = nk_propertyf(ctx, "#A:", 0, particlesColor.a, 1.0f, 0.01f, 0.005f);
+			particleSystem->particlesColor = glm::vec3(particlesColor.r, particlesColor.g, particlesColor.b);
 			nk_combo_end(ctx);
 		}
 	}

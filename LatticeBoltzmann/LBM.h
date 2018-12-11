@@ -2,10 +2,16 @@
 
 #include "ShaderProgram.h"
 
+
+
 class LBM {
 public:
 
-	int *d_numParticles;
+	enum eLBMControlProperty {
+		MIRROR_SIDES_PROP
+	};
+
+	int *d_numParticles;	// managed in memory by Particle System class (destructor)
 
 	int latticeWidth;
 	int latticeHeight;
@@ -17,7 +23,10 @@ public:
 	float itau;
 	float nu;
 
-	int useSubgridModel = 0;
+	int useSubgridModel = 0;	// experimental - incorrect
+
+	int mirrorSides = 1;		// used in 2D (CPU)
+	int respawnLinearly = 0;	// not used yet
 
 	string sceneFilename;
 
@@ -37,6 +46,8 @@ public:
 	virtual void updateInlets() = 0;
 	virtual void updateColliders() = 0;
 	virtual void resetSimulation() = 0;
+
+	virtual void updateControlProperty(eLBMControlProperty controlProperty) = 0;
 
 	virtual void recalculateVariables();
 

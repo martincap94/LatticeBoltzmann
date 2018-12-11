@@ -13,6 +13,8 @@ public:
 
 	bool *area;
 
+	bool initialized = false;
+
 	//LatticeCollider();
 	LatticeCollider(string filename);
 	~LatticeCollider();

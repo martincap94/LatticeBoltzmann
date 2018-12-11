@@ -1,21 +1,15 @@
 #include "Grid2D.h"
 
 
-Grid2D::Grid2D() {
-	//gridVertices = new glm::vec2[GRID_WIDTH * GRID_HEIGHT];
+Grid2D::Grid2D(int width, int height, int stepX, int stepY) {
 
-	//int idx = 0;
-	for (int x = 0; x < GRID_WIDTH; x++) {
-		//gridVertices[idx++] = glm::vec2(x, 0.0f);
-		//gridVertices[idx++] = glm::vec2(x, GRID_HEIGHT);
+	for (int x = 0; x < width; x += stepX) {
 		gridVertices.push_back(glm::vec3(x, 0.0f, -2.0f));
-		gridVertices.push_back(glm::vec3(x, GRID_HEIGHT - 1, -2.0f));
+		gridVertices.push_back(glm::vec3(x, height - 1, -2.0f));
 	}
-	for (int y = 0; y < GRID_HEIGHT; y++) {
-		//gridVertices[idx++] = glm::vec2(0.0f, y);
-		//gridVertices[idx++] = glm::vec2(GRID_WIDTH, y);
+	for (int y = 0; y < height; y += stepY) {
 		gridVertices.push_back(glm::vec3(0.0f, y, -2.0f));
-		gridVertices.push_back(glm::vec3(GRID_WIDTH - 1, y, -2.0f));
+		gridVertices.push_back(glm::vec3(width - 1, y, -2.0f));
 	}
 
 	glGenVertexArrays(1, &vao);
@@ -35,7 +29,6 @@ Grid2D::Grid2D() {
 
 
 Grid2D::~Grid2D() {
-	//delete[] gridVertices;
 }
 
 void Grid2D::draw(ShaderProgram &shader) {

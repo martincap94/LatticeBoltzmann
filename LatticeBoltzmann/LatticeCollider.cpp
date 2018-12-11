@@ -12,7 +12,8 @@ LatticeCollider::LatticeCollider(string filename) {
 
 	if (filename.find(".ppm") == string::npos) {
 		cerr << "Lattice Collider only accepts .ppm files!" << endl;
-		return;
+		exit(-1);
+		//return;
 	}
 	ifstream inFile(filename);
 	string line;
@@ -46,11 +47,7 @@ LatticeCollider::LatticeCollider(string filename) {
 			inFile >> dummy; // take red channel only
 			area[x + width * y] = (bool)dummy;
 			if (area[x + width * y]) {
-#ifdef USE_REINDEXED_LBM2D
 				areaPoints.push_back(glm::vec3(x, y, 0.0f));
-#else
-				areaPoints.push_back(glm::vec3(y, x, 0.0f));
-#endif
 			}
 			inFile >> dummy;
 			inFile >> dummy;
@@ -73,7 +70,7 @@ LatticeCollider::LatticeCollider(string filename) {
 	glBindVertexArray(0);
 
 
-
+	initialized = true;
 
 
 }

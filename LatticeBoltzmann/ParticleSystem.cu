@@ -43,9 +43,7 @@ ParticleSystem::ParticleSystem(int numParticles, bool drawStreamlines) : numPart
 	}
 
 
-	testTexture.loadTexture("textures/pointTex.png");
-
-
+	spriteTexture.loadTexture(((string)TEXTURES_DIR + "pointTex.png").c_str());
 
 
 }
@@ -57,7 +55,7 @@ ParticleSystem::~ParticleSystem() {
 	if (streamLines != nullptr) {
 		delete[] streamLines;
 	}
-	//cudaFree(d_numParticles);
+	cudaFree(d_numParticles);
 }
 
 void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
@@ -65,7 +63,7 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 	glUseProgram(shader.id);
 
 	glActiveTexture(GL_TEXTURE0 + 0);
-	glBindTexture(GL_TEXTURE_2D, testTexture.id);
+	glBindTexture(GL_TEXTURE_2D, spriteTexture.id);
 
 	glPointSize(pointSize);
 	shader.setVec3("uColor", particlesColor);
@@ -91,18 +89,18 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 
 		glDrawArrays(GL_POINTS, 0, numParticles  * MAX_STREAMLINE_LENGTH);
 	}
-
-	//glBindTexture()
-
 }
 
-void ParticleSystem::initParticlePositions(int width, int height) {
+void ParticleSystem::initParticlePositions(int width, int height, bool *collider) {
 	int particleCount = 0;
-	int x = 0;
-	int y = 0;
+	float x = 0;
+	float y = 0;
 	float offset = 0.1f;
 	while (particleCount != numParticles) {
-		particleVertices[particleCount] = glm::vec3(x, y++, -1.0f);
+		if (!collider[(int)x + width * (int)y]) {
+			particleVertices[particleCount] = glm::vec3(x, y, -1.0f);
+		}
+		y++;
 		if (y >= height - 1) {
 			y = 0;
 			x++;
