@@ -75,8 +75,13 @@ void saveConfigParam(string param, string val);
 void constructUserInterface(nk_context *ctx, nk_colorf &bg);
 
 enum eShaderProgram {
-
+	DIR_LIGHT_SHADER,
+	POINT_SPRITE_SHADER,
+	SINGLE_COLOR_SHADER,
+	SINGLE_COLOR_ALPHA_SHADER
 };
+
+//ShaderProgram shaders[4];
 
 
 enum eLBMType {
@@ -581,8 +586,13 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 
 		nk_layout_row_dynamic(ctx, 30, 1);
 		nk_label_colored_wrap(ctx, "Enabling or disabling CUDA at runtime is highly unstable at the moment, use at your own discretion", nk_rgba_f(1.0f, 0.5f, 0.5f, 1.0f));
+
+		bool useCUDAPrev = useCUDA;
 		nk_checkbox_label(ctx, "Use CUDA", &useCUDACheckbox);
 		useCUDA = useCUDACheckbox;
+		if (useCUDAPrev != useCUDA && useCUDA == false) {
+			lbm->switchToCPU();
+		}
 
 		nk_layout_row_dynamic(ctx, 25, 1);
 

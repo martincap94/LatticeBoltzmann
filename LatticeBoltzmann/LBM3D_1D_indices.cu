@@ -557,7 +557,7 @@ __global__ void collisionStepKernelShared(Node3D *backLattice, glm::vec3 *veloci
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
 	idx += blockDim.x * blockDim.y * blockIdx.x;
 
-	__shared__ Node3D cache[256];
+	__shared__ Node3D cache[64];
 	int cacheIdx = threadIdx.x + blockDim.x * threadIdx.y;
 
 
@@ -1067,8 +1067,8 @@ LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 
 
 
-	blockDim = dim3(16, 16, 1);
-	gridDim = dim3((int)(latticeSize / (16 * 16)) + 1, 1, 1);
+	blockDim = dim3(16, 4, 1);
+	gridDim = dim3((int)(latticeSize / (16 * 4)) + 1, 1, 1);
 
 
 
@@ -1191,6 +1191,8 @@ void LBM3D_1D_indices::doStep() {
 }
 
 void LBM3D_1D_indices::doStepCUDA() {
+
+	CHECK_ERROR(cudaPeekAtLastError());
 
 	// ============================================= clear back lattice CUDA
 	clearBackLatticeKernel << <gridDim, blockDim >> > (d_backLattice);
@@ -1893,6 +1895,9 @@ void LBM3D_1D_indices::resetSimulation() {
 
 void LBM3D_1D_indices::updateControlProperty(eLBMControlProperty controlProperty) {
 
+}
+
+void LBM3D_1D_indices::switchToCPU() {
 }
 
 void LBM3D_1D_indices::initBuffers() {

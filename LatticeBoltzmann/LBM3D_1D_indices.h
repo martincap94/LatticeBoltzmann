@@ -143,6 +143,7 @@ public:
 
 	virtual void updateControlProperty(eLBMControlProperty controlProperty);
 
+	virtual void switchToCPU();
 
 
 private:

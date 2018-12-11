@@ -53,3 +53,9 @@ const glm::vec3 directionVectors3D[19] = {
 	glm::vec3(1.0f, -1.0f, 0.0f),
 	glm::vec3(-1.0f, -1.0f, 0.0f)
 };
+
+
+enum eComputeDevice {
+	CPU,
+	GPU
+};

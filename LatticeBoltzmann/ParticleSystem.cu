@@ -72,7 +72,7 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 
 	if (!useCUDA) {
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles, &particleVertices[0], GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles, &particleVertices[0], GL_STREAM_DRAW);
 	}
 
 	glDrawArrays(GL_POINTS, 0, numParticles);
@@ -85,7 +85,7 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 		glBindVertexArray(streamLinesVAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, streamLinesVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles * MAX_STREAMLINE_LENGTH, &streamLines[0], GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles * MAX_STREAMLINE_LENGTH, &streamLines[0], GL_STREAM_DRAW);
 
 		glDrawArrays(GL_POINTS, 0, numParticles  * MAX_STREAMLINE_LENGTH);
 	}
@@ -148,4 +148,18 @@ void ParticleSystem::initParticlePositions(int width, int height, int depth) {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles, &particleVertices[0], GL_DYNAMIC_DRAW);
+}
+
+void ParticleSystem::copyDataFromVBOtoCPU() {
+
+	printf("Copying data from VBO to CPU in ParticleSystem\n");
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glm::vec3 *tmp = (glm::vec3 *)glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY);
+
+	for (int i = 0; i < numParticles; i++) {
+		particleVertices[i] = tmp[i];
+	}
+	glUnmapBuffer(GL_ARRAY_BUFFER);
+
+
 }

@@ -34,6 +34,7 @@ public:
 	void initParticlePositions(int width, int height, bool *collider);
 	void initParticlePositions(int width, int height, int depth);
 
+	void copyDataFromVBOtoCPU();
 
 	GLuint vbo;
 

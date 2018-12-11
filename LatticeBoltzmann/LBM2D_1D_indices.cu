@@ -6,6 +6,8 @@
 #include <vector>
 #include <iostream>
 
+#include <omp.h>3
+
 
 //#define BLOCK_DIM 512
 
@@ -554,6 +556,15 @@ void LBM2D_1D_indices::updateControlProperty(eLBMControlProperty controlProperty
 
 }
 
+void LBM2D_1D_indices::switchToCPU() {
+	cout << "Copying data back to CPU for simulation..." << endl;
+	cudaMemcpy(frontLattice, d_frontLattice, sizeof(Node) * latticeSize, cudaMemcpyDeviceToHost);
+	cudaMemcpy(backLattice, d_backLattice, sizeof(Node) * latticeSize, cudaMemcpyDeviceToHost);
+	cudaMemcpy(velocities, d_velocities, sizeof(glm::vec2) * latticeSize, cudaMemcpyDeviceToHost);
+
+	particleSystem->copyDataFromVBOtoCPU();
+}
+
 
 
 LBM2D_1D_indices::~LBM2D_1D_indices() {
@@ -719,6 +730,7 @@ void LBM2D_1D_indices::clearBackLattice() {
 void LBM2D_1D_indices::streamingStep() {
 
 	for (int x = 0; x < latticeWidth; x++) {
+#pragma omp parallel for simd 
 		for (int y = 0; y < latticeHeight; y++) {
 
 			backLattice[getIdx(x, y)].adj[DIR_MIDDLE] += frontLattice[getIdx(x, y)].adj[DIR_MIDDLE];
@@ -774,6 +786,7 @@ void LBM2D_1D_indices::collisionStep() {
 	float weightDiagonal = 1.0f / 36.0f;
 
 	for (int x = 0; x < latticeWidth; x++) {
+#pragma omp parallel for simd
 		for (int y = 0; y < latticeHeight; y++) {
 
 
@@ -1038,6 +1051,7 @@ void LBM2D_1D_indices::moveParticles() {
 
 
 	glm::vec2 adjVelocities[4];
+#pragma omp parallel for simd
 	for (int i = 0; i < particleSystem->numParticles; i++) {
 		float x = particleVertices[i].x;
 		float y = particleVertices[i].y;
