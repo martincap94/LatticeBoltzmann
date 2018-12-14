@@ -87,6 +87,7 @@ public:
 	LatticeCollider *tCol;
 
 	struct cudaGraphicsResource *cuda_vbo_resource;
+	struct cudaGraphicsResource *cudaParticlesColorVBO;
 
 	//GLuint tcVAO;
 	//GLuint tcVBO;

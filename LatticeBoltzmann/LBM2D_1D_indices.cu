@@ -5,8 +5,10 @@
 
 #include <vector>
 #include <iostream>
+#include <glm\gtx\norm.hpp>
+#include "CUDAUtils.cuh"
 
-#include <omp.h>3
+#include <omp.h>
 
 
 //#define BLOCK_DIM 512
@@ -27,6 +29,18 @@ __constant__ int d_respawnMaxY;
 
 __device__ int getIdxKernel(int x, int y) {
 	return x + y * d_latticeWidth;
+}
+
+__device__ __host__ glm::vec3 mapToColor(float val) {
+	val = glm::clamp(val, 0.0f, 1.0f);
+
+	return glm::rgbColor((1.0f - val) *  glm::hsvColor(glm::vec3(1.0f, 0.0f, 0.0f)) + val * glm::hsvColor(glm::vec3(0.0f, 1.0f, 0.0f)));
+}
+
+__device__ __host__ glm::vec3 mapToViridis(float val) {
+	val = glm::clamp(val, 0.0f, 1.0f);
+	int discreteVal = (int)(val * 255.0f);
+	return glm::vec3(viridis_cm[discreteVal][0], viridis_cm[discreteVal][1], viridis_cm[discreteVal][2]);
 }
 
 
@@ -68,7 +82,7 @@ __global__ void moveParticlesKernel(glm::vec3 *particleVertices, glm::vec2 *velo
 	}
 }
 
-__global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *velocities, int *numParticles) {
+__global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *velocities, int *numParticles, glm::vec3 *particleColors) {
 
 
 	glm::vec2 adjVelocities[4];
@@ -97,10 +111,16 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *
 
 		glm::vec2 finalVelocity = bottomVelocity * verticalRatio + topVelocity * (1.0f - verticalRatio);
 
+
+
 		//particleVertices[idx] += make_float3(finalVelocity.x, 0.0f);
 		particleVertices[idx].x += finalVelocity.x;
 		particleVertices[idx].y += finalVelocity.y;
 
+
+		//particleColors[idx] = glm::vec3(glm::length2(finalVelocity) * 4.0f);
+		//particleColors[idx] = mapToColor(glm::length2(finalVelocity) * 4.0f);
+		particleColors[idx] = mapToViridis(glm::length2(finalVelocity) * 4.0f);
 
 		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
 			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1) {
@@ -518,6 +538,8 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 
 
 	cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, particleSystem->vbo, cudaGraphicsMapFlagsWriteDiscard);
+	cudaGraphicsGLRegisterBuffer(&cudaParticlesColorVBO, particleSystem->colorsVBO, cudaGraphicsMapFlagsWriteDiscard);
+
 
 
 	initBuffers();
@@ -581,6 +603,7 @@ LBM2D_1D_indices::~LBM2D_1D_indices() {
 	cudaFree(d_velocities);
 
 	cudaGraphicsUnregisterResource(cuda_vbo_resource);
+	cudaGraphicsUnregisterResource(cudaParticlesColorVBO);
 
 }
 
@@ -703,9 +726,15 @@ void LBM2D_1D_indices::doStepCUDA() {
 	cudaGraphicsResourceGetMappedPointer((void **)&dptr, &num_bytes, cuda_vbo_resource);
 	//printf("CUDA mapped VBO: May access %ld bytes\n", num_bytes);
 
-	moveParticlesKernelInterop << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (dptr, d_velocities, d_numParticles);
+	glm::vec3 *d_particleColors;
+	cudaGraphicsMapResources(1, &cudaParticlesColorVBO, 0);
+	cudaGraphicsResourceGetMappedPointer((void **)&d_particleColors, &num_bytes, cudaParticlesColorVBO);
+
+
+	moveParticlesKernelInterop << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (dptr, d_velocities, d_numParticles, d_particleColors);
 
 	cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0);
+	cudaGraphicsUnmapResources(1, &cudaParticlesColorVBO, 0);
 
 	swapLattices();
 }

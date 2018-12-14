@@ -34,4 +34,6 @@
 //#define SUBGRID_EXPERIMENTAL
 #define SMAG_C 0.3f
 
+#define VISUALIZE_VELOCITY
+
 using namespace std;

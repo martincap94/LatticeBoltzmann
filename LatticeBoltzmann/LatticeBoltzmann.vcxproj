@@ -173,6 +173,8 @@
     <None Include="dirLightOnly.vert" />
     <None Include="pointSpriteTest.frag" />
     <None Include="pointSpriteTest.vert" />
+    <None Include="coloredParticle.frag" />
+    <None Include="coloredParticle.vert" />
     <None Include="unlitColor.frag" />
     <None Include="unlitColor.vert" />
     <None Include="singleColor_alpha.frag" />

@@ -37,6 +37,7 @@ public:
 	void copyDataFromVBOtoCPU();
 
 	GLuint vbo;
+	GLuint colorsVBO;
 
 private:
 

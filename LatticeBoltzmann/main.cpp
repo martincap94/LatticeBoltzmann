@@ -249,6 +249,7 @@ int runApp() {
 	ShaderProgram unlitColorShader("unlitColor.vert", "unlitColor.frag");
 	ShaderProgram dirLightOnlyShader("dirLightOnly.vert", "dirLightOnly.frag");
 	ShaderProgram pointSpriteTestShader("pointSpriteTest.vert", "pointSpriteTest.frag");
+	ShaderProgram coloredParticleShader("coloredParticle.vert", "coloredParticle.frag");
 
 	if (lbmType == LBM3D) {
 		((LBM3D_1D_indices*)lbm)->testHM->shader = &dirLightOnlyShader;
@@ -281,6 +282,9 @@ int runApp() {
 	dirLightOnlyShader.setMat4fv("uProjection", projection);
 	glUseProgram(pointSpriteTestShader.id);
 	pointSpriteTestShader.setMat4fv("uProjection", projection);
+
+	glUseProgram(coloredParticleShader.id);
+	coloredParticleShader.setMat4fv("uProjection", projection);
 
 	GeneralGrid gGrid(100, 5);
 
@@ -369,6 +373,9 @@ int runApp() {
 		glUseProgram(pointSpriteTestShader.id);
 		pointSpriteTestShader.setMat4fv("uView", view);
 
+		glUseProgram(coloredParticleShader.id);
+		coloredParticleShader.setMat4fv("uView", view);
+
 
 		grid->draw(singleColorShader);
 
@@ -378,7 +385,11 @@ int runApp() {
 		if (usePointSprites) {
 			particleSystem->draw(pointSpriteTestShader, useCUDA);
 		} else {
+#ifdef VISUALIZE_VELOCITY
+			particleSystem->draw(coloredParticleShader, useCUDA);
+#else
 			particleSystem->draw(singleColorShader, useCUDA);
+#endif
 		}
 
 		//grid.draw(singleColorShaderAlpha);

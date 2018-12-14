@@ -198,6 +198,12 @@
     <None Include="pointSpriteTest.vert">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="coloredParticle.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="coloredParticle.vert">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="config.ini">
