@@ -607,7 +607,7 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 
 		nk_layout_row_dynamic(ctx, 25, 1);
 
-		nk_property_float(ctx, "Tau:", 0.5005f, &lbm->tau, 2.0f, 0.005f, 0.005f);
+		nk_property_float(ctx, "Tau:", 0.5005f, &lbm->tau, 10.0f, 0.005f, 0.005f);
 
 		int mirrorSidesPrev = lbm->mirrorSides;
 		nk_layout_row_dynamic(ctx, 15, 1);
