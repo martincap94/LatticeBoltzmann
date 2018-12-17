@@ -8,6 +8,8 @@
 
 #define TEXTURES_DIR "textures/"
 
+//#define LBM_EXPERIMENTAL // experimental features
+
 
 //#define DRAW_VELOCITY_ARROWS
 //#define DRAW_PARTICLE_VELOCITY_ARROWS

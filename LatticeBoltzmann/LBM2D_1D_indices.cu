@@ -20,6 +20,7 @@ __constant__ int d_latticeSize;
 __constant__ float d_tau;
 __constant__ float d_itau;
 __constant__ int d_mirrorSides;
+//__constant__ int d_visualizeVelocity;
 
 __device__ int d_respawnIndex = 0;
 __constant__ int d_respawnMinY;
@@ -244,7 +245,7 @@ __global__ void streamingStepKernel(Node *backLattice, Node *frontLattice) {
 
 }
 
-__global__ void updateInletsKernel(Node *lattice) {
+__global__ void updateInletsKernel(Node *lattice, glm::vec3 inletVelocity) {
 
 	float weightMiddle = 4.0f / 9.0f;
 	float weightAxis = 1.0f / 9.0f;
@@ -253,7 +254,7 @@ __global__ void updateInletsKernel(Node *lattice) {
 
 	float macroDensity = 1.0f;
 
-	glm::vec3 macroVelocity = glm::vec3(1.0f, 0.0f, 0.0f);
+	//glm::vec3 macroVelocity = inletVelocity; // unnecessary variable -> remove
 
 	const glm::vec3 vRight = glm::vec3(1.0f, 0.0f, 0.0f);
 	const glm::vec3 vTop = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -271,53 +272,53 @@ __global__ void updateInletsKernel(Node *lattice) {
 
 	// optimize these operations later
 
-	float macroVelocityDot = glm::dot(macroVelocity, macroVelocity);
+	float macroVelocityDot = glm::dot(inletVelocity, inletVelocity);
 	float thirdTerm = 1.5f * macroVelocityDot / LAT_SPEED_SQ;
 
 	float middleEq = leftTermMiddle + leftTermMiddle * (-thirdTerm);
 
 	// this can all be rewritten into arrays + for cycles!
-	float dotProd = glm::dot(vRight, macroVelocity);
+	float dotProd = glm::dot(vRight, inletVelocity);
 	float firstTerm = 3.0f * dotProd / LAT_SPEED;
 	float secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float rightEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
-	dotProd = glm::dot(vTop, macroVelocity);
+	dotProd = glm::dot(vTop, inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float topEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
-	dotProd = glm::dot(vLeft, macroVelocity);
+	dotProd = glm::dot(vLeft, inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float leftEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(vBottom, macroVelocity);
+	dotProd = glm::dot(vBottom, inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float bottomEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(vTopRight, macroVelocity);
+	dotProd = glm::dot(vTopRight, inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float topRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(vTopLeft, macroVelocity);
+	dotProd = glm::dot(vTopLeft, inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float topLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(vBottomLeft, macroVelocity);
+	dotProd = glm::dot(vBottomLeft, inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float bottomLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(vBottomRight, macroVelocity);
+	dotProd = glm::dot(vBottomRight, inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
@@ -516,6 +517,7 @@ LBM2D_1D_indices::LBM2D_1D_indices() {
 }
 
 LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem) : LBM(dim, sceneFilename, tau), particleSystem(particleSystem) {
+	
 
 	initScene();
 
@@ -707,7 +709,7 @@ void LBM2D_1D_indices::doStepCUDA() {
 	clearBackLatticeKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice);
 
 	// ============================================= update inlets CUDA
-	updateInletsKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice);
+	updateInletsKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, inletVelocity);
 
 	// ============================================= streaming step CUDA
 	streamingStepKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_frontLattice);
@@ -1104,6 +1106,7 @@ void LBM2D_1D_indices::moveParticles() {
 
 		glm::vec2 finalVelocity = bottomVelocity * verticalRatio + topVelocity * (1.0f - verticalRatio);
 
+
 #ifdef DRAW_PARTICLE_VELOCITY_ARROWS
 		particleArrows.push_back(particleVertices[i]);
 #endif
@@ -1163,7 +1166,7 @@ void LBM2D_1D_indices::updateInlets() {
 
 	float macroDensity = 1.0f;
 
-	glm::vec3 macroVelocity = glm::vec3(1.0f, 0.0f, 0.0f);
+	glm::vec3 macroVelocity = inletVelocity;
 
 	// let's find the equilibrium
 	float leftTermMiddle = weightMiddle * macroDensity;
@@ -1261,7 +1264,7 @@ void LBM2D_1D_indices::updateInlets(Node *lattice) {
 
 	float macroDensity = 1.0f;
 
-	glm::vec3 macroVelocity = glm::vec3(1.0f, 0.0f, 0.0f);
+	glm::vec3 macroVelocity = inletVelocity;
 
 	// let's find the equilibrium
 	float leftTermMiddle = weightMiddle * macroDensity;

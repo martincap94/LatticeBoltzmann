@@ -241,7 +241,7 @@ int runApp() {
 			break;
 	}
 	camera->setLatticeDimensions(latticeWidth, latticeHeight, latticeDepth);
-
+	particleSystem->lbm = lbm;
 
 
 	ShaderProgram singleColorShader("singleColor.vert", "singleColor.frag");
@@ -290,13 +290,11 @@ int runApp() {
 
 	int frameCounter = 0;
 
-
-	glEnable(GL_MULTISAMPLE); // enable multisampling (on by default)
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-	glEnable(GL_DEPTH_TEST);
+	// all done in loop due to nuklear usage
+	//glEnable(GL_MULTISAMPLE); // enable multisampling (on by default)
+	//glEnable(GL_BLEND);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glEnable(GL_DEPTH_TEST);
 
 	glfwSwapInterval(vsync); // VSync Settings (0 is off, 1 is 60FPS, 2 is 30FPS and so on)
 
@@ -307,7 +305,9 @@ int runApp() {
 	while (!glfwWindowShouldClose(window) && appRunning) {
 
 		// enable flags because of nuklear
-		glEnable(GL_DEPTH_TEST);
+		//if (lbmType == LBM3D) {
+			glEnable(GL_DEPTH_TEST);
+		//}
 		glEnable(GL_LIGHTING);
 		glEnable(GL_TEXTURE_2D);
 		glEnable(GL_TEXTURE_1D);
@@ -384,12 +384,10 @@ int runApp() {
 
 		if (usePointSprites) {
 			particleSystem->draw(pointSpriteTestShader, useCUDA);
-		} else {
-#ifdef VISUALIZE_VELOCITY
+		} else if (lbm->visualizeVelocity) {
 			particleSystem->draw(coloredParticleShader, useCUDA);
-#else
+		} else {
 			particleSystem->draw(singleColorShader, useCUDA);
-#endif
 		}
 
 		//grid.draw(singleColorShaderAlpha);
@@ -422,9 +420,9 @@ int runApp() {
 
 	cudaMemGetInfo(&cudaMemFree, &cudaMemTotal);
 
-	cout << " FREE CUDA MEMORY  = " << cudaMemFree << endl;
+	/*cout << " FREE CUDA MEMORY  = " << cudaMemFree << endl;
 	cout << " TOTAL CUDA MEMORY = " << cudaMemTotal << endl;
-
+*/
 
 	return 0;
 
@@ -594,7 +592,7 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 		}
 
 
-
+#ifdef LBM_EXPERIMENTAL
 		nk_layout_row_dynamic(ctx, 30, 1);
 		nk_label_colored_wrap(ctx, "Enabling or disabling CUDA at runtime is highly unstable at the moment, use at your own discretion", nk_rgba_f(1.0f, 0.5f, 0.5f, 1.0f));
 
@@ -604,6 +602,7 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 		if (useCUDAPrev != useCUDA && useCUDA == false) {
 			lbm->switchToCPU();
 		}
+#endif
 
 		nk_layout_row_dynamic(ctx, 25, 1);
 
@@ -632,29 +631,44 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 			glfwSwapInterval(vsync);
 		}
 
+		nk_label(ctx, "Inlet velocity:", NK_TEXT_LEFT);
+				
+		nk_layout_row_dynamic(ctx, 15, (lbmType == LBM2D) ? 2 : 3);
+		nk_property_float(ctx, "x:", 0.0f, &lbm->inletVelocity.x, 1.0f, 0.01f, 0.005f);
+		nk_property_float(ctx, "y:", -1.0f, &lbm->inletVelocity.y, 1.0f, 0.01f, 0.005f);
+		if (lbmType == LBM3D) {
+			nk_property_float(ctx, "z:", -1.0f, &lbm->inletVelocity.z, 1.0f, 0.01f, 0.005f);
+		}
 
 
 		nk_layout_row_dynamic(ctx, 15, 1);
 		//nk_label(ctx, "Use point sprites", NK_TEXT_LEFT);
 		nk_checkbox_label(ctx, "Use point sprites", &usePointSprites);
 
+		if (lbmType == LBM2D && useCUDA && !usePointSprites) {
+			nk_layout_row_dynamic(ctx, 15, 1);
+			nk_checkbox_label(ctx, "Visualize velocity", &lbm->visualizeVelocity);
+		}
+
 		nk_layout_row_dynamic(ctx, 10, 1);
 		nk_labelf(ctx, NK_TEXT_LEFT, "Point size");
 		nk_slider_int(ctx, 1, &particleSystem->pointSize, 100, 1);
 
-		nk_layout_row_dynamic(ctx, 20, 1);
-		nk_label(ctx, "Particles Color:", NK_TEXT_LEFT);
-		nk_layout_row_dynamic(ctx, 25, 1);
-		if (nk_combo_begin_color(ctx, nk_rgb_cf(particlesColor), nk_vec2(nk_widget_width(ctx), 400))) {
-			nk_layout_row_dynamic(ctx, 120, 1);
-			particlesColor = nk_color_picker(ctx, particlesColor, NK_RGBA);
+		if (!usePointSprites && !lbm->visualizeVelocity) {
+			nk_layout_row_dynamic(ctx, 20, 1);
+			nk_label(ctx, "Particles Color:", NK_TEXT_LEFT);
 			nk_layout_row_dynamic(ctx, 25, 1);
-			particlesColor.r = nk_propertyf(ctx, "#R:", 0, particlesColor.r, 1.0f, 0.01f, 0.005f);
-			particlesColor.g = nk_propertyf(ctx, "#G:", 0, particlesColor.g, 1.0f, 0.01f, 0.005f);
-			particlesColor.b = nk_propertyf(ctx, "#B:", 0, particlesColor.b, 1.0f, 0.01f, 0.005f);
-			particlesColor.a = nk_propertyf(ctx, "#A:", 0, particlesColor.a, 1.0f, 0.01f, 0.005f);
-			particleSystem->particlesColor = glm::vec3(particlesColor.r, particlesColor.g, particlesColor.b);
-			nk_combo_end(ctx);
+			if (nk_combo_begin_color(ctx, nk_rgb_cf(particlesColor), nk_vec2(nk_widget_width(ctx), 400))) {
+				nk_layout_row_dynamic(ctx, 120, 1);
+				particlesColor = nk_color_picker(ctx, particlesColor, NK_RGBA);
+				nk_layout_row_dynamic(ctx, 25, 1);
+				particlesColor.r = nk_propertyf(ctx, "#R:", 0, particlesColor.r, 1.0f, 0.01f, 0.005f);
+				particlesColor.g = nk_propertyf(ctx, "#G:", 0, particlesColor.g, 1.0f, 0.01f, 0.005f);
+				particlesColor.b = nk_propertyf(ctx, "#B:", 0, particlesColor.b, 1.0f, 0.01f, 0.005f);
+				particlesColor.a = nk_propertyf(ctx, "#A:", 0, particlesColor.a, 1.0f, 0.01f, 0.005f);
+				particleSystem->particlesColor = glm::vec3(particlesColor.r, particlesColor.g, particlesColor.b);
+				nk_combo_end(ctx);
+			}
 		}
 	}
 	nk_end(ctx);

@@ -2,6 +2,8 @@
 
 #include <cuda_runtime.h>
 
+#include "LBM.h"
+
 ParticleSystem::ParticleSystem() {
 }
 
@@ -86,6 +88,11 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles, &particleVertices[0], GL_STREAM_DRAW);
 	}
+	//if (lbm->visualizeVelocity) {
+	//	glEnableVertexAttribArray(1);
+	//} else {
+	//	glDisableVertexAttribArray(1);
+	//}
 
 	glDrawArrays(GL_POINTS, 0, numParticles);
 

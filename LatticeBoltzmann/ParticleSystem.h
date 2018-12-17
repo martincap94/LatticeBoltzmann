@@ -8,8 +8,12 @@
 
 #include "Texture.h"
 
+class LBM; // forward declaration
+
 class ParticleSystem {
 public:
+
+	LBM *lbm; // owner
 
 	int numParticles;
 	int *d_numParticles;

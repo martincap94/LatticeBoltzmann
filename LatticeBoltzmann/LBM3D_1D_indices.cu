@@ -16,6 +16,7 @@ __constant__ int d_latticeSize;
 __constant__ float d_tau;
 __constant__ float d_itau;
 
+
 __device__ int d_respawnY = 0;
 __device__ int d_respawnZ = 0;
 
@@ -203,10 +204,10 @@ __global__ void clearBackLatticeKernel(Node3D *backLattice) {
 }
 
 
-__global__ void updateInletsKernel(Node3D *backLattice, glm::vec3 *velocities) {
+__global__ void updateInletsKernel(Node3D *backLattice, glm::vec3 *velocities, glm::vec3 inletVelocity) {
 
 	float macroDensity = 1.0f;
-	glm::vec3 macroVelocity = glm::vec3(0.4f, 0.0f, 0.0f);
+	//glm::vec3 macroVelocity = inletVelocity;
 
 
 	float leftTermMiddle = WEIGHT_MIDDLE * macroDensity;
@@ -214,111 +215,111 @@ __global__ void updateInletsKernel(Node3D *backLattice, glm::vec3 *velocities) {
 	float leftTermNonaxial = WEIGHT_NON_AXIAL * macroDensity;
 
 
-	float macroVelocityDot = glm::dot(macroVelocity, macroVelocity);
+	float macroVelocityDot = glm::dot(inletVelocity, inletVelocity);
 	float thirdTerm = 1.5f * macroVelocityDot;
 
 	float middleEq = leftTermMiddle + leftTermMiddle * (-thirdTerm);
 
-	float dotProd = glm::dot(dirVectorsConst[DIR_RIGHT_FACE], macroVelocity);
+	float dotProd = glm::dot(dirVectorsConst[DIR_RIGHT_FACE], inletVelocity);
 	float firstTerm = 3.0f * dotProd;
 	float secondTerm = 4.5f * dotProd * dotProd;
 	float rightEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_LEFT_FACE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_LEFT_FACE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float leftEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
-	dotProd = glm::dot(dirVectorsConst[DIR_FRONT_FACE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_FRONT_FACE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float frontEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_BACK_FACE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_BACK_FACE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float backEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_TOP_FACE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_TOP_FACE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float topEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_BOTTOM_FACE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_BOTTOM_FACE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float bottomEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_BACK_RIGHT_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_BACK_RIGHT_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float backRightEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_BACK_LEFT_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_BACK_LEFT_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float backLeftEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_FRONT_RIGHT_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_FRONT_RIGHT_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float frontRightEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_FRONT_LEFT_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_FRONT_LEFT_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float frontLeftEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_TOP_BACK_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_TOP_BACK_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float topBackEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_TOP_FRONT_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_TOP_FRONT_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float topFrontEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_BOTTOM_BACK_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_BOTTOM_BACK_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float bottomBackEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
-	dotProd = glm::dot(dirVectorsConst[DIR_BOTTOM_FRONT_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_BOTTOM_FRONT_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float bottomFrontEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_TOP_RIGHT_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_TOP_RIGHT_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float topRightEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_TOP_LEFT_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_TOP_LEFT_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float topLeftEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(dirVectorsConst[DIR_BOTTOM_RIGHT_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_BOTTOM_RIGHT_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float bottomRightEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
 
-	dotProd = glm::dot(dirVectorsConst[DIR_BOTTOM_LEFT_EDGE], macroVelocity);
+	dotProd = glm::dot(dirVectorsConst[DIR_BOTTOM_LEFT_EDGE], inletVelocity);
 	firstTerm = 3.0f * dotProd;
 	secondTerm = 4.5f * dotProd * dotProd;
 	float bottomLeftEq = leftTermNonaxial + leftTermNonaxial * (firstTerm + secondTerm - thirdTerm);
@@ -1199,7 +1200,7 @@ void LBM3D_1D_indices::doStepCUDA() {
 	CHECK_ERROR(cudaPeekAtLastError());
 
 	// ============================================= update inlets CUDA
-	updateInletsKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities);
+	updateInletsKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities, inletVelocity);
 	CHECK_ERROR(cudaPeekAtLastError());
 
 	// ============================================= streaming step CUDA
@@ -1659,7 +1660,7 @@ void LBM3D_1D_indices::updateInlets() {
 
 
 	float macroDensity = 1.0f;
-	glm::vec3 macroVelocity = glm::vec3(0.4f, 0.0f, 0.0f);
+	glm::vec3 macroVelocity = inletVelocity;
 
 
 	float leftTermMiddle = weightMiddle * macroDensity;

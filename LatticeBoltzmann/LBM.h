@@ -23,9 +23,15 @@ public:
 	float itau;
 	float nu;
 
+	//float inletVelocity = 0.5f;
+	glm::vec3 inletVelocity = glm::vec3(1.0f, 0.0f, 0.0f);
+
+
 	int useSubgridModel = 0;	// experimental - incorrect
 
-	int mirrorSides = 1;		// used in 2D (CPU)
+	int mirrorSides = 1;		
+	int visualizeVelocity = 0;  // used only in 2D at the time
+
 	int respawnLinearly = 0;	// not used yet
 
 	string sceneFilename;
