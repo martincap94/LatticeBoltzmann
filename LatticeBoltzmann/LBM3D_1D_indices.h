@@ -148,6 +148,8 @@ public:
 
 private:
 
+	int frameId = 0; // for debuggin
+
 	int respawnY = 0;
 	int respawnZ = 0;
 

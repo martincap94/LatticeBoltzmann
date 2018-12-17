@@ -36,6 +36,8 @@
 #include "Grid.h"
 #include "Utils.h"
 
+#include <omp.h>
+
 //#include <vld.h>
 
 //#define NK_INKLUDE_STYLE
@@ -140,6 +142,20 @@ int main(int argc, char **argv) {
 
 int runApp() {
 
+	/*int ompMaxThreads = omp_get_max_threads();
+	printf("OpenMP max threads = %d\n", ompMaxThreads);
+
+	omp_set_num_threads(ompMaxThreads);
+
+
+	int count = 0;
+#pragma omp parallel num_threads(ompMaxThreads)
+	{
+#pragma omp atomic
+		count++;
+	}
+	printf_s("Number of threads: %d\n", count);*/
+
 	loadConfigFile();
 
 	glfwInit();
@@ -243,6 +259,8 @@ int runApp() {
 	camera->setLatticeDimensions(latticeWidth, latticeHeight, latticeDepth);
 	particleSystem->lbm = lbm;
 
+
+	lbm->mirrorSides = false;
 
 	ShaderProgram singleColorShader("singleColor.vert", "singleColor.frag");
 	ShaderProgram singleColorShaderAlpha("singleColor.vert", "singleColor_alpha.frag");

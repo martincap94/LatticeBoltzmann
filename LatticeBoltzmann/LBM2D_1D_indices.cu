@@ -136,7 +136,7 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *
 					}
 				} else {
 					//particleVertices[idx] = glm::vec3(x, (int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1), 0.0f);
-					particleVertices[idx].x = x;
+					//particleVertices[idx].x = x;
 					particleVertices[idx].y = (int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1);
 					//particleVertices[idx].z = 0.0f;
 				}
@@ -761,7 +761,7 @@ void LBM2D_1D_indices::clearBackLattice() {
 void LBM2D_1D_indices::streamingStep() {
 
 	for (int x = 0; x < latticeWidth; x++) {
-#pragma omp parallel for simd 
+//#pragma omp parallel for/* simd */
 		for (int y = 0; y < latticeHeight; y++) {
 
 			backLattice[getIdx(x, y)].adj[DIR_MIDDLE] += frontLattice[getIdx(x, y)].adj[DIR_MIDDLE];
@@ -817,7 +817,7 @@ void LBM2D_1D_indices::collisionStep() {
 	float weightDiagonal = 1.0f / 36.0f;
 
 	for (int x = 0; x < latticeWidth; x++) {
-#pragma omp parallel for simd
+//#pragma omp parallel for /*simd*/
 		for (int y = 0; y < latticeHeight; y++) {
 
 
@@ -1082,11 +1082,13 @@ void LBM2D_1D_indices::moveParticles() {
 
 
 	glm::vec2 adjVelocities[4];
-#pragma omp parallel for simd
+
+//#pragma omp parallel for/* simd*/
 	for (int i = 0; i < particleSystem->numParticles; i++) {
 		float x = particleVertices[i].x;
 		float y = particleVertices[i].y;
 
+		//printf("OpenMP move particles num threads = %d\n", omp_get_num_threads());
 
 		int leftX = (int)x;
 		int rightX = leftX + 1;

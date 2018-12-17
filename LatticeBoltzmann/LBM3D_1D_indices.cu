@@ -15,6 +15,8 @@ __constant__ int d_latticeDepth;
 __constant__ int d_latticeSize;
 __constant__ float d_tau;
 __constant__ float d_itau;
+__constant__ int d_mirrorSides;
+
 
 
 __device__ int d_respawnY = 0;
@@ -75,11 +77,27 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec3 *
 		particleVertices[idx].y += finalVelocity.y;
 		particleVertices[idx].z += finalVelocity.z;
 
+
+		// back to basics! - consult with Sloup
 		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
 			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1 ||
 			particleVertices[idx].z <= 0.0f || particleVertices[idx].z >= d_latticeDepth - 1) {
+			
+			particleVertices[idx].x = 0.0f;
+			particleVertices[idx].y = y;
+			particleVertices[idx].z = z;
+			//particleVertices[idx].y = d_respawnY;
+			//particleVertices[idx].z = d_respawnZ++;
 
-			//particleVertices[idx] = glm::vec3(0.0f, d_respawnY, d_respawnZ++);
+		}
+		
+
+		/*
+		if (d_mirrorSides && (particleVertices[idx].z <= 0.0f || particleVertices[idx].z >= d_latticeDepth - 1)) {
+			particleVertices[idx].z = (int)(particleVertices[idx].z + d_latticeDepth - 1) % (d_latticeDepth - 1);
+		} else if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
+					particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1 || 
+				   particleVertices[idx].z <= 0.0f || particleVertices[idx].z >= d_latticeDepth - 1) {
 			particleVertices[idx].x = 0.0f;
 			particleVertices[idx].y = d_respawnY;
 			particleVertices[idx].z = d_respawnZ++;
@@ -92,6 +110,53 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec3 *
 				d_respawnY = 0;
 			}
 		}
+		*/
+		
+
+		/*
+		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
+			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1 ||
+			particleVertices[idx].z <= 0.0f || particleVertices[idx].z >= d_latticeDepth - 1) {
+
+			if (d_mirrorSides) {
+				if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
+					particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1) {
+					particleVertices[idx].x = 0.0f;
+					particleVertices[idx].y = d_respawnY;
+					particleVertices[idx].z = d_respawnZ++;
+
+					if (d_respawnZ >= d_latticeDepth - 1) {
+						d_respawnZ = 0;
+						d_respawnY++;
+					}
+					if (d_respawnY >= d_latticeHeight - 1) {
+						d_respawnY = 0;
+					}
+				} else {
+					//particleVertices[idx].x = x;
+					//particleVertices[idx].y = y;
+					particleVertices[idx].z = (int)(particleVertices[idx].z + d_latticeDepth - 1) % (d_latticeDepth - 1);
+				}
+			} else {
+
+
+				//particleVertices[idx] = glm::vec3(0.0f, d_respawnY, d_respawnZ++);
+				particleVertices[idx].x = 0.0f;
+				particleVertices[idx].y = d_respawnY;
+				particleVertices[idx].z = d_respawnZ++;
+
+				if (d_respawnZ >= d_latticeDepth - 1) {
+					d_respawnZ = 0;
+					d_respawnY++;
+				}
+				if (d_respawnY >= d_latticeHeight - 1) {
+					d_respawnY = 0;
+				}
+			}
+		}
+		*/
+		
+		
 
 /*
 		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1) {
@@ -1065,6 +1130,7 @@ LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 	cudaMemcpyToSymbol(d_latticeSize, &latticeSize, sizeof(int));
 	cudaMemcpyToSymbol(d_tau, &tau, sizeof(float));
 	cudaMemcpyToSymbol(d_itau, &itau, sizeof(float));
+	cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
 
 
 
@@ -1193,6 +1259,7 @@ void LBM3D_1D_indices::doStep() {
 
 void LBM3D_1D_indices::doStepCUDA() {
 
+	cout << "FRAME " << frameId << endl;
 	CHECK_ERROR(cudaPeekAtLastError());
 
 	// ============================================= clear back lattice CUDA
@@ -1240,6 +1307,8 @@ void LBM3D_1D_indices::doStepCUDA() {
 
 	swapLattices();
 	CHECK_ERROR(cudaPeekAtLastError());
+
+	frameId++;
 
 }
 
@@ -1895,8 +1964,13 @@ void LBM3D_1D_indices::resetSimulation() {
 }
 
 void LBM3D_1D_indices::updateControlProperty(eLBMControlProperty controlProperty) {
-
+	switch (controlProperty) {
+		case MIRROR_SIDES_PROP:
+			cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
+			break;
+	}
 }
+
 
 void LBM3D_1D_indices::switchToCPU() {
 }
