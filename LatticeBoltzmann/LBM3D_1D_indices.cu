@@ -27,6 +27,14 @@ __device__ int getIdxKer(int x, int y, int z) {
 	return (x + d_latticeWidth * (y + d_latticeHeight * z));
 }
 
+// uniform random between 0.0 and 1.0
+__device__ float rand(int x, int y) {
+	int n = x + y * 57;
+	n = (n << 13) ^ n;
+
+	return ((1.0f - ((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0f) + 1.0f) * 0.5f;
+}
+
 
 __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec3 *velocities, int *numParticles) {
 
@@ -78,18 +86,22 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec3 *
 		particleVertices[idx].z += finalVelocity.z;
 
 
+		
 		// back to basics! - consult with Sloup
 		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
 			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1 ||
 			particleVertices[idx].z <= 0.0f || particleVertices[idx].z >= d_latticeDepth - 1) {
 			
 			particleVertices[idx].x = 0.0f;
-			particleVertices[idx].y = y;
-			particleVertices[idx].z = z;
+			//particleVertices[idx].y = y;
+			particleVertices[idx].y = rand(threadIdx.x, y) * (d_latticeHeight - 1);
+			//particleVertices[idx].z = z;
+			particleVertices[idx].z = rand(threadIdx.x, z) * (d_latticeDepth - 1);
 			//particleVertices[idx].y = d_respawnY;
 			//particleVertices[idx].z = d_respawnZ++;
 
 		}
+		
 		
 
 		/*
@@ -100,14 +112,19 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec3 *
 				   particleVertices[idx].z <= 0.0f || particleVertices[idx].z >= d_latticeDepth - 1) {
 			particleVertices[idx].x = 0.0f;
 			particleVertices[idx].y = d_respawnY;
-			particleVertices[idx].z = d_respawnZ++;
+			particleVertices[idx].z = d_respawnZ;
+			//d_respawnZ++;
+			atomicAdd(&d_respawnZ, 1);
 
 			if (d_respawnZ >= d_latticeDepth - 1) {
 				d_respawnZ = 0;
-				d_respawnY++;
+				//atomicExch(&d_respawnZ, 0);
+				//d_respawnY++;
+				atomicAdd(&d_respawnY, 1);
 			}
 			if (d_respawnY >= d_latticeHeight - 1) {
 				d_respawnY = 0;
+				//atomicExch(&d_respawnY, 0);
 			}
 		}
 		*/
@@ -1259,54 +1276,53 @@ void LBM3D_1D_indices::doStep() {
 
 void LBM3D_1D_indices::doStepCUDA() {
 
-	cout << "FRAME " << frameId << endl;
-	CHECK_ERROR(cudaPeekAtLastError());
+	//CHECK_ERROR(cudaPeekAtLastError());
 
 	// ============================================= clear back lattice CUDA
 	clearBackLatticeKernel << <gridDim, blockDim >> > (d_backLattice);
-	CHECK_ERROR(cudaPeekAtLastError());
+	//CHECK_ERROR(cudaPeekAtLastError());
 
 	// ============================================= update inlets CUDA
 	updateInletsKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities, inletVelocity);
-	CHECK_ERROR(cudaPeekAtLastError());
+	//CHECK_ERROR(cudaPeekAtLastError());
 
 	// ============================================= streaming step CUDA
 	streamingStepKernel << <gridDim, blockDim >> > (d_backLattice, d_frontLattice);
-	CHECK_ERROR(cudaPeekAtLastError());
+	//CHECK_ERROR(cudaPeekAtLastError());
 
 	// ============================================= update colliders CUDA
 	updateCollidersKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities, d_heightMap);
-	CHECK_ERROR(cudaPeekAtLastError());
+	//CHECK_ERROR(cudaPeekAtLastError());
 
 	// ============================================= collision step CUDA
 	//collisionStepKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities);
 	collisionStepKernelShared << <gridDim, blockDim >> > (d_backLattice, d_velocities);
 	//collisionStepKernelStreamlinedShared << <gridDim, blockDim >> > (d_backLattice, d_velocities);
 
-	CHECK_ERROR(cudaPeekAtLastError());
+	//CHECK_ERROR(cudaPeekAtLastError());
 	
 
 	// ============================================= move particles CUDA - different respawn from CPU !!!
 
 	float3 *dptr;
 	cudaGraphicsMapResources(1, &cuda_vbo_resource, 0);
-	CHECK_ERROR(cudaPeekAtLastError());
+	//CHECK_ERROR(cudaPeekAtLastError());
 
 	size_t num_bytes;
 	cudaGraphicsResourceGetMappedPointer((void **)&dptr, &num_bytes, cuda_vbo_resource);
 	//printf("CUDA mapped VBO: May access %ld bytes\n", num_bytes);
 
 	moveParticlesKernelInterop << <gridDim, blockDim >> > (dptr, d_velocities, d_numParticles);
-	CHECK_ERROR(cudaPeekAtLastError());
+	//CHECK_ERROR(cudaPeekAtLastError());
 
 	cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0);
-	CHECK_ERROR(cudaPeekAtLastError());
+	//CHECK_ERROR(cudaPeekAtLastError());
 
 
 
 
 	swapLattices();
-	CHECK_ERROR(cudaPeekAtLastError());
+	//CHECK_ERROR(cudaPeekAtLastError());
 
 	frameId++;
 
