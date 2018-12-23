@@ -98,7 +98,7 @@ public:
 
 	LBM2D_1D_indices();
 	LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem);
-	~LBM2D_1D_indices();
+	virtual ~LBM2D_1D_indices();
 
 
 	virtual void recalculateVariables();
@@ -125,6 +125,9 @@ public:
 	virtual void updateControlProperty(eLBMControlProperty controlProperty);
 
 	virtual void switchToCPU();
+
+protected:
+	virtual void swapLattices();
 
 
 private:
@@ -154,7 +157,6 @@ private:
 	}
 
 
-	void swapLattices();
 	float calculateMacroscopicDensity(int x, int y);
 	glm::vec3 calculateMacroscopicVelocity(int x, int y, float macroDensity);
 

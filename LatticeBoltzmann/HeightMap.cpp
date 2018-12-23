@@ -5,8 +5,7 @@
 #include <glm\glm.hpp>
 #include <vector>
 
-HeightMap::HeightMap() {
-}
+HeightMap::HeightMap() {}
 
 HeightMap::HeightMap(string filename, int latticeHeight, ShaderProgram *shader) : shader(shader) {
 
@@ -129,6 +128,7 @@ HeightMap::HeightMap(string filename, int latticeHeight, ShaderProgram *shader) 
 
 
 HeightMap::~HeightMap() {
+	cout << "DELETING HEIGHTMAP" << endl;
 	for (int i = 0; i < width; i++) {
 		delete[] data[i];
 	}

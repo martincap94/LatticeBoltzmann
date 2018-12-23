@@ -5,9 +5,6 @@
 #include <glm\glm.hpp>
 #include <vector>
 
-//LatticeCollider::LatticeCollider() {
-//}
-
 LatticeCollider::LatticeCollider(string filename) {
 
 	if (filename.find(".ppm") == string::npos) {
@@ -70,16 +67,10 @@ LatticeCollider::LatticeCollider(string filename) {
 	glBindVertexArray(0);
 
 
-	initialized = true;
-
-
 }
 
 
 LatticeCollider::~LatticeCollider() {
-	//for (int i = 0; i < width; i++) {
-	//	delete[] area[i];
-	//}
 	delete[] area;
 }
 

@@ -6,8 +6,6 @@
 #include <iostream>
 #include "CUDAUtils.cuh"
 
-#include "helper_cuda.h"
-
 
 __constant__ int d_latticeWidth;
 __constant__ int d_latticeHeight;
@@ -1173,6 +1171,8 @@ LBM3D_1D_indices::~LBM3D_1D_indices() {
 	delete[] backLattice;
 	delete[] velocities;
 
+	delete heightMap;
+
 	cudaFree(d_frontLattice);
 	cudaFree(d_backLattice);
 	cudaFree(d_velocities);
@@ -1189,21 +1189,21 @@ void LBM3D_1D_indices::recalculateVariables() {
 }
 
 void LBM3D_1D_indices::initScene() {
-	testHM = new HeightMap(sceneFilename, latticeHeight, nullptr);
+	heightMap = new HeightMap(sceneFilename, latticeHeight, nullptr);
 
 
-	latticeWidth = testHM->width;
-	latticeDepth = testHM->height;
+	latticeWidth = heightMap->width;
+	latticeDepth = heightMap->height;
 	latticeSize = latticeWidth * latticeHeight * latticeDepth;
 
 	float *tempHM = new float[latticeWidth * latticeDepth];
 	for (int z = 0; z < latticeDepth; z++) {
 		for (int x = 0; x < latticeWidth; x++) {
-			tempHM[x + z * latticeWidth] = testHM->data[x][z];
+			tempHM[x + z * latticeWidth] = heightMap->data[x][z];
 		}
 	}
 	cudaMalloc((void**)&d_heightMap, sizeof(float) * latticeWidth * latticeDepth);
-	//cudaMemcpy(d_heightMap, testHM->data, sizeof(float) * latticeWidth * latticeDepth, cudaMemcpyHostToDevice);
+	//cudaMemcpy(d_heightMap, heightMap->data, sizeof(float) * latticeWidth * latticeDepth, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_heightMap, tempHM, sizeof(float) * latticeWidth * latticeDepth, cudaMemcpyHostToDevice);
 
 
@@ -1253,7 +1253,7 @@ void LBM3D_1D_indices::draw(ShaderProgram & shader) {
 	glDrawArrays(GL_LINES, 0, particleArrows.size());
 #endif
 
-	testHM->draw();
+	heightMap->draw();
 
 }
 
@@ -1908,7 +1908,7 @@ void LBM3D_1D_indices::updateColliders() {
 			for (int z = 0; z < latticeDepth; z++) {
 				int idx = getIdx(x, y, z);
 
-				if ((testHM->data[x][z] >= y && testHM->data[x][z] > 0.01f) || y == 0) {
+				if ((heightMap->data[x][z] >= y && heightMap->data[x][z] > 0.01f) || y == 0) {
 
 
 

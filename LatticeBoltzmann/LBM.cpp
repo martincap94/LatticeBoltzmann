@@ -1,8 +1,7 @@
 #include "LBM.h"
 
 
-LBM::LBM() {
-}
+LBM::LBM() {}
 
 LBM::LBM(glm::vec3 dimensions, string sceneFilename, float tau) : latticeWidth(dimensions.x), latticeHeight(dimensions.y), latticeDepth(dimensions.z), sceneFilename(sceneFilename), tau(tau) {
 	itau = 1.0f / tau;
@@ -10,8 +9,7 @@ LBM::LBM(glm::vec3 dimensions, string sceneFilename, float tau) : latticeWidth(d
 }
 
 
-LBM::~LBM() {
-}
+LBM::~LBM() {}
 
 void LBM::recalculateVariables() {
 	itau = 1.0f / tau;

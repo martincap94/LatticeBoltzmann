@@ -8,7 +8,7 @@
 
 #include "Config.h"
 
-#define GLM_FORCE_CUDA // for glm CUDA
+#define GLM_FORCE_CUDA // force GLM to be compatible with CUDA kernels
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -36,11 +36,14 @@
 #include "Grid.h"
 #include "Utils.h"
 
-#include <omp.h>
+#include <omp.h>	// OpenMP for CPU parallelization
 
-//#include <vld.h>
+//#include <vld.h>	// Visual Leak Detector for memory leaks analysis
 
-//#define NK_INKLUDE_STYLE
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+///// NUKLEAR /////////////////////////////////////////////////////////////////
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
@@ -62,20 +65,38 @@
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///// FORWARD DECLARATIONS OF FUNCTIONS
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
+/// Run the application.
 int runApp();
-void processInput(GLFWwindow* window);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-void loadConfigFile();
-void saveConfigParam(string param, string val);
-void constructUserInterface(nk_context *ctx, nk_colorf &bg);
 
+/// Process keyboard inputs of the window.
+void processInput(GLFWwindow* window);
+
+/// Mouse scroll callback for the window.
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+
+/// Mouse button callback for the window.
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+
+/// Load configuration file and parse all correct parameters.
+void loadConfigFile();
+
+/// Save configuration parameters to correct variables.
+void saveConfigParam(string param, string val);
+
+/// Constructs the user interface for the given context. Must be called in each frame!
+void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor);
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///// ENUMS
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// Unused enum that may be used to simplify shader usage.
 enum eShaderProgram {
 	DIR_LIGHT_SHADER,
 	POINT_SPRITE_SHADER,
@@ -83,55 +104,60 @@ enum eShaderProgram {
 	SINGLE_COLOR_ALPHA_SHADER
 };
 
-//ShaderProgram shaders[4];
-
-
+/// Enum listing all possible LBM types. LBM2D_reindex and LBM3D_reindexed were deprecated, hence they are absent.
 enum eLBMType {
 	LBM2D,
 	LBM3D
 };
 
-eLBMType lbmType;
-
-LBM *lbm;
-Grid *grid;
-Camera *camera;
-ParticleSystem *particleSystem;
-
-int vsync = 0;
-int numParticles = 1000; // default value
-string sceneFilename;
-bool useCUDA = true;
-int useCUDACheckbox = 1;
-
-float deltaTime = 0.0f;
-float lastFrameTime;
-
-glm::mat4 view;
-glm::mat4 projection;
-
-int windowWidth = 1000;
-int windowHeight = 1000;
-
-int screenWidth;
-int screenHeight;
-
-int latticeWidth = 100;
-int latticeHeight = 100;
-int latticeDepth = 100;
-
-float tau = 0.52f;
-
-bool drawStreamlines = false;
-
-int paused = 0;
-
-int usePointSprites = 0;
-
-bool appRunning = true;
 
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///// GLOBAL VARIABLES
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
+eLBMType lbmType;		///< The LBM type that is to be displayed
+
+LBM *lbm;				///< Pointer to the current LBM
+Grid *grid;				///< Pointer to the current grid
+Camera *camera;			///< Pointer to the current camera
+ParticleSystem *particleSystem;		///< Pointer to the particle system that is to be used throughout the whole application
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///// DEFAULT VALUES THAT ARE TO BE REWRITTEN FROM THE CONFIG FILE
+///////////////////////////////////////////////////////////////////////////////////////////////////
+int vsync = 0;				///< VSync value
+int numParticles = 1000;	///< Number of particles
+string sceneFilename;		///< Filename of the scene
+bool useCUDA = true;		///< Whether to use CUDA or run the CPU version of the application
+int useCUDACheckbox = 1;	///< Helper int value for the UI checkbox
+
+float deltaTime = 0.0f;		///< Delta time of the current frame
+float lastFrameTime;		///< Duration of the last frame
+
+glm::mat4 view;				///< View matrix
+glm::mat4 projection;		///< Projection matrix
+
+int windowWidth = 1000;		///< Window width
+int windowHeight = 1000;	///< Window height
+
+int screenWidth;			///< Screen width
+int screenHeight;			///< Screen height
+
+int latticeWidth = 100;		///< Default lattice width
+int latticeHeight = 100;	///< Default lattice height
+int latticeDepth = 100;		///< Defailt lattice depth
+
+float tau = 0.52f;			///< Default tau value
+
+bool drawStreamlines = false;	///< Whether to draw streamlines - DRAWING STREAMLINES CURRENTLY NOT VIABLE
+int paused = 0;				///< Whether the simulation is paused
+int usePointSprites = 0;	///< Whether to use point sprites for point visualization
+bool appRunning = true;		///< Helper boolean to stop the application with the exit button in the user interface
+
+
+
+/// Main - runs the application and sets seed for the random number generator.
 int main(int argc, char **argv) {
 	srand(time(NULL));
 
@@ -140,6 +166,13 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
+/// Runs the application including the game loop.
+/**
+	Creates the window, user interface and all the main parts of the simulation including the simulator itself (either
+	LBM 2D or 3D), grids, particle system, and collider object (2D) or height map (3D).
+	Furthermore, creates all the shaders and runs the main game loop of the application in which the simulation is updated
+	and the UI is drawn (and constructed since nuklear panel needs to be constructed in each frame).
+*/
 int runApp() {
 
 	/*int ompMaxThreads = omp_get_max_threads();
@@ -184,9 +217,6 @@ int runApp() {
 		return -1;
 	}
 
-	glfwSetScrollCallback(window, scroll_callback);
-	glfwSetMouseButtonCallback(window, mouse_button_callback);
-
 
 	glViewport(0, 0, screenWidth, screenHeight);
 
@@ -223,6 +253,7 @@ int runApp() {
 
 	glm::vec3 dim(latticeWidth, latticeHeight, latticeDepth);
 
+	// Create and configure the simulator, select from 2D and 3D options and set parameters accordingly
 	switch (lbmType) {
 		case LBM2D:
 			printf("LBM2D SETUP...\n");
@@ -253,15 +284,16 @@ int runApp() {
 
 			projection = glm::ortho(-projectionRange, projectionRange, -projectionRange, projectionRange, nearPlane, farPlane);
 			grid = new Grid3D(latticeWidth, latticeHeight, latticeDepth, 6, 6, 6);
-			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 10.0f, glm::vec3(latticeWidth / 2.0f, latticeHeight / 2.0f, latticeDepth / 2.0f));
+			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 80.0f, glm::vec3(latticeWidth / 2.0f, latticeHeight / 2.0f, latticeDepth / 2.0f));
 			break;
 	}
 	camera->setLatticeDimensions(latticeWidth, latticeHeight, latticeDepth);
 	particleSystem->lbm = lbm;
 
-
-	lbm->mirrorSides = false;
-
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	///// SHADERS - should be simplified with helper classes, unfortunately due to time constraints
+	/////			it has remained in this shape
+	//////////////////////////////////////////////////////////////////////////////////////////////////
 	ShaderProgram singleColorShader("singleColor.vert", "singleColor.frag");
 	ShaderProgram singleColorShaderAlpha("singleColor.vert", "singleColor_alpha.frag");
 	ShaderProgram unlitColorShader("unlitColor.vert", "unlitColor.frag");
@@ -270,7 +302,7 @@ int runApp() {
 	ShaderProgram coloredParticleShader("coloredParticle.vert", "coloredParticle.frag");
 
 	if (lbmType == LBM3D) {
-		((LBM3D_1D_indices*)lbm)->testHM->shader = &dirLightOnlyShader;
+		((LBM3D_1D_indices*)lbm)->heightMap->shader = &dirLightOnlyShader;
 	}
 
 	DirectionalLight dirLight;
@@ -286,7 +318,6 @@ int runApp() {
 	dirLightOnlyShader.setVec3("dirLight.diffuse", dirLight.diffuse);
 	dirLightOnlyShader.setVec3("dirLight.specular", dirLight.specular);
 	dirLightOnlyShader.setVec3("vViewPos", camera->position);
-
 
 
 	glUseProgram(singleColorShader.id);
@@ -307,25 +338,19 @@ int runApp() {
 	GeneralGrid gGrid(100, 5);
 
 	int frameCounter = 0;
-
-	// all done in loop due to nuklear usage
-	//glEnable(GL_MULTISAMPLE); // enable multisampling (on by default)
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	//glEnable(GL_DEPTH_TEST);
-
 	glfwSwapInterval(vsync); // VSync Settings (0 is off, 1 is 60FPS, 2 is 30FPS and so on)
-
+	
 	float prevTime = glfwGetTime();
-
 	int totalFrameCounter = 0;
+
+	// Set these callbacks after nuklear initialization, otherwise they won't work!
+	glfwSetScrollCallback(window, scroll_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
 
 	while (!glfwWindowShouldClose(window) && appRunning) {
 
-		// enable flags because of nuklear
-		//if (lbmType == LBM3D) {
-			glEnable(GL_DEPTH_TEST);
-		//}
+		// enable flags each frame due to nuklear disabling them for its render call
+		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_LIGHTING);
 		glEnable(GL_TEXTURE_2D);
 		glEnable(GL_TEXTURE_1D);
@@ -334,8 +359,6 @@ int runApp() {
 		glEnable(GL_MULTISAMPLE);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		//cout << "frame " << frameCounter++ << endl;
 
 		float currentFrameTime = glfwGetTime();
 		deltaTime = currentFrameTime - lastFrameTime;
@@ -353,14 +376,11 @@ int runApp() {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-
 		glfwPollEvents();
-
 		processInput(window);
-
 		constructUserInterface(ctx, particlesColor);
 
+		// MAIN SIMULATION STEP
 		if (!paused) {
 			if (useCUDA) {
 				lbm->doStepCUDA();
@@ -370,6 +390,7 @@ int runApp() {
 		}
 
 
+		// UPDATE SHADER VIEW MATRICES
 		view = camera->getViewMatrix();
 
 		glUseProgram(singleColorShader.id);
@@ -395,10 +416,10 @@ int runApp() {
 		coloredParticleShader.setMat4fv("uView", view);
 
 
+
+		// DRAW SCENE
 		grid->draw(singleColorShader);
-
 		lbm->draw(singleColorShader);
-
 
 		if (usePointSprites) {
 			particleSystem->draw(pointSpriteTestShader, useCUDA);
@@ -407,30 +428,23 @@ int runApp() {
 		} else {
 			particleSystem->draw(singleColorShader, useCUDA);
 		}
-
-		//grid.draw(singleColorShaderAlpha);
-
 		gGrid.draw(unlitColorShader);
 
-
-		//camera.printInfo();
-
-
+		// Render the user interface
 		nk_glfw3_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
-		lbm->recalculateVariables();
+
+		lbm->recalculateVariables(); // recalculate variables based on values set in the user interface
 
 		glfwSwapBuffers(window);
 
 	}
 
-	delete particleSystem;
 
+	delete particleSystem;
 	delete lbm;
 	delete grid;
 	delete camera;
 
-	nk_glfw3_shutdown();
-	glfwTerminate();
 
 
 	size_t cudaMemFree = 0;
@@ -438,9 +452,14 @@ int runApp() {
 
 	cudaMemGetInfo(&cudaMemFree, &cudaMemTotal);
 
-	/*cout << " FREE CUDA MEMORY  = " << cudaMemFree << endl;
+	/*
+	cout << " FREE CUDA MEMORY  = " << cudaMemFree << endl;
 	cout << " TOTAL CUDA MEMORY = " << cudaMemTotal << endl;
-*/
+	*/
+
+
+	nk_glfw3_shutdown();
+	glfwTerminate();
 
 	return 0;
 

@@ -163,12 +163,6 @@
     <ClInclude Include="Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="helper_cuda.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="helper_string.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="singleColor.vert">

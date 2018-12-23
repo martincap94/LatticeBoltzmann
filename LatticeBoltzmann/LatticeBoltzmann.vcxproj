@@ -147,8 +147,6 @@
     <ClInclude Include="Grid.h" />
     <ClInclude Include="Grid3D.h" />
     <ClInclude Include="HeightMap.h" />
-    <ClInclude Include="helper_cuda.h" />
-    <ClInclude Include="helper_string.h" />
     <ClInclude Include="LatticeCollider.h" />
     <ClCompile Include="Config.h" />
     <ClInclude Include="Grid2D.h" />

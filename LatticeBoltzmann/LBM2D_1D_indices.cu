@@ -846,7 +846,6 @@ void LBM2D_1D_indices::collisionStep() {
 
 			float middleEq = leftTermMiddle + leftTermMiddle * (-thirdTerm);
 
-			// this can all be rewritten into arrays + for cycles!
 			float dotProd = glm::dot(vRight, macroVelocity);
 			float firstTerm = 3.0f * dotProd;
 			float secondTerm = 4.5f * dotProd * dotProd;
@@ -1029,14 +1028,11 @@ void LBM2D_1D_indices::collisionStepStreamlined() {
 			float leftTermAxis = WEIGHT_AXIS * macroDensity;
 			float leftTermDiagonal = WEIGHT_DIAGONAL * macroDensity;
 
-			// optimize these operations later
-
 			float macroVelocityDot = glm::dot(macroVelocity, macroVelocity);
 			float thirdTerm = 1.5f * macroVelocityDot;
 
 			float middleEq = leftTermMiddle + leftTermMiddle * (-thirdTerm);
 
-			// this can all be rewritten into arrays + for cycles!
 			float rightEq = leftTermAxis * (1.0f + 3.0f * macroVelocity.x + 4.5f * macroVelocity.x * macroVelocity.x - thirdTerm);
 			float topEq = leftTermAxis * (1.0f + 3.0f * macroVelocity.y + 4.5f * macroVelocity.y * macroVelocity.y - thirdTerm);
 			float leftEq = leftTermAxis * (1.0f - 3.0f * macroVelocity.x + 4.5f * macroVelocity.x * macroVelocity.x - thirdTerm);
@@ -1049,7 +1045,6 @@ void LBM2D_1D_indices::collisionStepStreamlined() {
 													 4.5f * (-macroVelocity.x - macroVelocity.y) * (-macroVelocity.x - macroVelocity.y) - thirdTerm);
 			float bottomRightEq = leftTermDiagonal * (1.0f + 3.0f * (macroVelocity.x - macroVelocity.y) +
 													  4.5f * (macroVelocity.x - macroVelocity.y) * (macroVelocity.x - macroVelocity.y) - thirdTerm);
-
 
 			backLattice[idx].adj[DIR_MIDDLE] -= itau * (backLattice[idx].adj[DIR_MIDDLE] - middleEq);
 			backLattice[idx].adj[DIR_RIGHT] -= itau * (backLattice[idx].adj[DIR_RIGHT] - rightEq);

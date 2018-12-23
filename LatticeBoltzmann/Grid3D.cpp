@@ -109,8 +109,7 @@ Grid3D::Grid3D(int width, int height, int depth, int stepX, int stepY, int stepZ
 }
 
 
-Grid3D::~Grid3D() {
-}
+Grid3D::~Grid3D() {}
 
 void Grid3D::draw(ShaderProgram &shader) {
 

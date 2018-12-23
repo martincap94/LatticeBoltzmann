@@ -19,32 +19,6 @@ __constant__ float WEIGHT_NON_AXIAL;
 
 class LBM3D_1D_indices : public LBM {
 
-	//struct Node3D {
-	//	float adj[19];
-	//};
-
-	// 3rd ordering
-	//enum EDirection3D {
-	//	DIR_MIDDLE = 0,
-	//	DIR_RIGHT_FACE,
-	//	DIR_LEFT_FACE,
-	//	DIR_BACK_FACE,
-	//	DIR_FRONT_FACE,
-	//	DIR_TOP_FACE,
-	//	DIR_BOTTOM_FACE,
-	//	DIR_BACK_RIGHT_EDGE,
-	//	DIR_BACK_LEFT_EDGE,
-	//	DIR_FRONT_RIGHT_EDGE,
-	//	DIR_FRONT_LEFT_EDGE,
-	//	DIR_TOP_BACK_EDGE,
-	//	DIR_TOP_FRONT_EDGE,
-	//	DIR_BOTTOM_BACK_EDGE,
-	//	DIR_BOTTOM_FRONT_EDGE,
-	//	DIR_TOP_RIGHT_EDGE,
-	//	DIR_TOP_LEFT_EDGE,
-	//	DIR_BOTTOM_RIGHT_EDGE,
-	//	DIR_BOTTOM_LEFT_EDGE
-	//};
 
 	const glm::vec3 vMiddle = glm::vec3(0.0f, 0.0f, 0.0f);
 	const glm::vec3 vRight = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -111,7 +85,7 @@ public:
 	bool *d_testCollider;
 	vector<glm::vec3> colliderVertices;
 
-	HeightMap *testHM;
+	HeightMap *heightMap;
 	float *d_heightMap;
 
 
@@ -121,7 +95,7 @@ public:
 
 	LBM3D_1D_indices();
 	LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem);
-	~LBM3D_1D_indices();
+	virtual ~LBM3D_1D_indices();
 
 	virtual void recalculateVariables();
 
@@ -145,10 +119,13 @@ public:
 
 	virtual void switchToCPU();
 
+protected:
+
+	virtual void swapLattices();
 
 private:
 
-	int frameId = 0; // for debuggin
+	int frameId = 0; // for debugging
 
 	int respawnY = 0;
 	int respawnZ = 0;
@@ -171,8 +148,6 @@ private:
 
 	void initBuffers();
 	void initLattice();
-
-	void swapLattices();
 
 	float calculateMacroscopicDensity(int x, int y, int z);
 	glm::vec3 calculateMacroscopicVelocity(int x, int y, int z, float macroDensity);

@@ -12,10 +12,10 @@ Grid2D::Grid2D(int width, int height, int stepX, int stepY) {
 		gridVertices.push_back(glm::vec3(width - 1, y, -2.0f));
 	}
 
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	
 	glBufferData(GL_ARRAY_BUFFER, gridVertices.size() * sizeof(glm::vec3), &gridVertices[0], GL_STATIC_DRAW);
 
@@ -28,13 +28,12 @@ Grid2D::Grid2D(int width, int height, int stepX, int stepY) {
 }
 
 
-Grid2D::~Grid2D() {
-}
+Grid2D::~Grid2D() {}
 
 void Grid2D::draw(ShaderProgram &shader) {
 	glUseProgram(shader.id);
 	shader.setVec3("uColor", glm::vec3(0.1f, 0.1f, 0.1f));
-	glBindVertexArray(vao);
+	glBindVertexArray(VAO);
 	glDrawArrays(GL_LINES, 0, gridVertices.size());
 
 
