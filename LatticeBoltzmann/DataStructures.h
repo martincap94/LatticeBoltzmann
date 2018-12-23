@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+* \file       DataStructures.h
+* \author     Martin Cap
+* \date       2018/12/23
+* \brief      Class containing important data structures for the application.
+*
+*  Class containing important data structures for the application.
+*
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 
 #include <glm\glm.hpp>
@@ -5,12 +17,13 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+/// Node for LBM 3D
 struct Node3D {
 	float adj[19];
 };
 
-// 3rd ordering
-enum EDirection3D {
+/// 3rd ordering enum as proposed by Woodgate et al.
+enum eDirection3D {
 	DIR_MIDDLE_VERTEX = 0,
 	DIR_RIGHT_FACE,
 	DIR_LEFT_FACE,
@@ -32,6 +45,7 @@ enum EDirection3D {
 	DIR_BOTTOM_LEFT_EDGE
 };
 
+/// Direction vectors for LBM 3D
 const glm::vec3 directionVectors3D[19] = {
 	glm::vec3(0.0f, 0.0f, 0.0f),
 	glm::vec3(1.0f, 0.0f, 0.0f),
@@ -54,8 +68,3 @@ const glm::vec3 directionVectors3D[19] = {
 	glm::vec3(-1.0f, -1.0f, 0.0f)
 };
 
-
-enum eComputeDevice {
-	CPU,
-	GPU
-};

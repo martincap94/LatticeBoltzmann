@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+* \file       Config.h
+* \author     Martin Cap
+* \date       2018/12/23
+* \brief      Configuration file.
+*
+*  Configuration header file that contains some of the variables that or not modifiable at runtime 
+*  (but at compile time).
+*
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
 #define GLM_ENABLE_EXPERIMENTAL

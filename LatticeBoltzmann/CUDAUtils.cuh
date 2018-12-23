@@ -1,3 +1,16 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+* \file       CUDAUtils.h
+* \author     Martin Cap
+* \date       2018/12/23
+* \brief      Utility header file that contains helper functions for CUDA usage.
+*
+*  Utility header file that contains helper functions for CUDA usage.
+*  At this moment it contains the 
+*
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 
 #include "cuda_runtime.h"
@@ -8,29 +21,27 @@
 
 #include <iostream>
 
-/// Adapted from slides
+/// Handle and print CUDA errors. Adapted from slides.
+/**
+	Prints and handles given CUDA errors. This function and its helper macro were adapted from slides.
+	\param[in] error	The error to handle.
+	\param[in] file		The source file the error may have occured in.
+	\param[in] line		The line where the error was processed.
+*/
 static void handleError(cudaError_t error, const char *file, int line) {
 	if (error != cudaSuccess) {
 		printf("%s in %s at line %d\n", cudaGetErrorString(error), file, line);
 		exit(EXIT_FAILURE);
 	}
 }
+
+/// Helper macro function that checks and handles error for the cudaError_t parameter.
 #define CHECK_ERROR( error ) ( handleError( error, __FILE__, __LINE__ ) )
 
 
-//const glm::vec3 firstVal = glm::hsvColor(glm::vec3(1.0f, 0.0f, 0.0f));
-//const glm::vec3 secondVal = glm::hsvColor(glm::vec3(0.0f, 1.0f, 0.0f));
-
-//__device__ __host__ glm::vec3 mapToColor(float val) {
-//	glm::clamp(val, 0.0f, 1.0f);
-//	
-//	return glm::rgbColor((1.0f - val) *  glm::hsvColor(glm::vec3(1.0f, 0.0f, 0.0f)) + val * glm::hsvColor(glm::vec3(0.0f, 1.0f, 0.0f)));
-//}
-
-
-// taken from https://github.com/libigl/libigl/blob/master/include/igl/colormap.cpp
+/// Viridis mapping array. Taken from https://github.com/libigl/libigl/blob/master/include/igl/colormap.cpp. 
 // One of the new matplotlib colormaps by Nathaniel J.Smith, Stefan van der Walt, and (in the case of viridis) Eric Firing.
-// Released under the CC0 license / public domain dedication
+// Released under the CC0 license / public domain dedication.
 __constant__ double viridis_cm[256][3] = {
 	{ 0.267004, 0.004874, 0.329415 },
 	{ 0.268510, 0.009605, 0.335427 },

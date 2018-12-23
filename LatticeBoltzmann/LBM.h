@@ -57,7 +57,6 @@ public:
 
 	virtual void recalculateVariables();
 
-	//virtual void changeDevice(eComputeDevice device);
 	virtual void switchToCPU() = 0;
 
 };

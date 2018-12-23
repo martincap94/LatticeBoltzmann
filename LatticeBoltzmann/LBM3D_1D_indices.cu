@@ -36,7 +36,7 @@ __device__ float rand(int x, int y) {
 }
 
 
-__global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec3 *velocities, int *numParticles) {
+__global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec3 *velocities, int *numParticles) {
 
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
 	idx += blockDim.x * blockDim.y * blockIdx.x;
@@ -1304,15 +1304,15 @@ void LBM3D_1D_indices::doStepCUDA() {
 
 	// ============================================= move particles CUDA - different respawn from CPU !!!
 
-	float3 *dptr;
+	glm::vec3 *d_particleVerticesVBO;
 	cudaGraphicsMapResources(1, &cuda_vbo_resource, 0);
 	//CHECK_ERROR(cudaPeekAtLastError());
 
 	size_t num_bytes;
-	cudaGraphicsResourceGetMappedPointer((void **)&dptr, &num_bytes, cuda_vbo_resource);
+	cudaGraphicsResourceGetMappedPointer((void **)&d_particleVerticesVBO, &num_bytes, cuda_vbo_resource);
 	//printf("CUDA mapped VBO: May access %ld bytes\n", num_bytes);
 
-	moveParticlesKernelInterop << <gridDim, blockDim >> > (dptr, d_velocities, d_numParticles);
+	moveParticlesKernelInterop << <gridDim, blockDim >> > (d_particleVerticesVBO, d_velocities, d_numParticles);
 	//CHECK_ERROR(cudaPeekAtLastError());
 
 	cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0);

@@ -20,7 +20,7 @@ glm::mat4 OrbitCamera::getViewMatrix() {
 }
 
 
-void OrbitCamera::processKeyboardMovement(CameraMovementDirection direction, float deltaTime) {
+void OrbitCamera::processKeyboardMovement(eCameraMovementDirection direction, float deltaTime) {
 	float velocity = movementSpeed * deltaTime;
 
 	if (direction == FORWARD) {
@@ -77,7 +77,7 @@ void OrbitCamera::processMouseScroll(float yoffset) {
 }
 
 
-void OrbitCamera::setView(CameraView camView) {
+void OrbitCamera::setView(eCameraView camView) {
 	switch (camView) {
 		case VIEW_FRONT:
 			position = glm::vec3(latticeWidth / 2.0f, latticeHeight / 2.0f, latticeDepth * 2.0f);
