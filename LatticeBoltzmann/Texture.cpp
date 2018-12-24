@@ -9,9 +9,6 @@ Texture::Texture() {
 	//loadTexture("SP_MissingThumbnail.png");
 }
 
-Texture::Texture(const char *path, unsigned int textureUnit) : textureUnit(textureUnit) {
-	loadTexture(path, false);
-}
 
 Texture::Texture(const char *path, unsigned int textureUnit, bool clampEdges) : textureUnit(textureUnit) {
 	loadTexture(path, clampEdges);
