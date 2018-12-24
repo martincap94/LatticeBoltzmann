@@ -94,7 +94,7 @@ public:
 
 
 	LBM3D_1D_indices();
-	LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem);
+	LBM3D_1D_indices(glm::vec3 latticeDim, string sceneFilename, float tau, ParticleSystem *particleSystem, dim3 blockDim);
 	virtual ~LBM3D_1D_indices();
 
 	virtual void recalculateVariables();
@@ -145,6 +145,7 @@ private:
 
 	dim3 blockDim;
 	dim3 gridDim;
+	int sharedMemCacheSize;
 
 	void initBuffers();
 	void initLattice();

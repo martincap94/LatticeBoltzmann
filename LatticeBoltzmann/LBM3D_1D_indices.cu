@@ -26,7 +26,7 @@ __device__ int getIdxKer(int x, int y, int z) {
 }
 
 // uniform random between 0.0 and 1.0
-__device__ float rand(int x, int y) {
+__device__ float rand3D(int x, int y) {
 	int n = x + y * 57;
 	n = (n << 13) ^ n;
 
@@ -92,9 +92,9 @@ __global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec
 			
 			particleVertices[idx].x = 0.0f;
 			//particleVertices[idx].y = y;
-			particleVertices[idx].y = rand(threadIdx.x, y) * (d_latticeHeight - 1);
+			particleVertices[idx].y = rand3D(threadIdx.x, y) * (d_latticeHeight - 1);
 			//particleVertices[idx].z = z;
-			particleVertices[idx].z = rand(threadIdx.x, z) * (d_latticeDepth - 1);
+			particleVertices[idx].z = rand3D(threadIdx.x, z) * (d_latticeDepth - 1);
 			//particleVertices[idx].y = d_respawnY;
 			//particleVertices[idx].z = d_respawnZ++;
 
@@ -638,14 +638,13 @@ __global__ void collisionStepKernelShared(Node3D *backLattice, glm::vec3 *veloci
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
 	idx += blockDim.x * blockDim.y * blockIdx.x;
 
-	__shared__ Node3D cache[64];
+	extern __shared__ Node3D cache[];
 	int cacheIdx = threadIdx.x + blockDim.x * threadIdx.y;
 
 
 	if (idx < d_latticeSize) {
 
 		cache[cacheIdx] = backLattice[idx];
-		//__syncthreads(); // not needed
 
 		float macroDensity = 0.0f;
 		for (int i = 0; i < 19; i++) {
@@ -832,7 +831,7 @@ __global__ void collisionStepKernelStreamlinedShared(Node3D *backLattice, glm::v
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
 	idx += blockDim.x * blockDim.y * blockIdx.x;
 
-	__shared__ Node3D cache[256];
+	extern __shared__ Node3D cache[];
 	int cacheIdx = threadIdx.x + blockDim.x * threadIdx.y;
 
 
@@ -1111,8 +1110,8 @@ LBM3D_1D_indices::LBM3D_1D_indices() {
 
 
 
-LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem)
-	: LBM(dim, sceneFilename, tau), particleSystem(particleSystem) {
+LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 latticeDim, string sceneFilename, float tau, ParticleSystem *particleSystem, dim3 blockDim)
+	: LBM(latticeDim, sceneFilename, tau), particleSystem(particleSystem), blockDim(blockDim) {
 
 	initScene();
 
@@ -1149,9 +1148,8 @@ LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 
 
 
-	blockDim = dim3(16, 4, 1);
-	gridDim = dim3((int)(latticeSize / (16 * 4)) + 1, 1, 1);
-
+	gridDim = dim3(ceil(latticeSize / (blockDim.x * blockDim.y * blockDim.z)), 1, 1);
+	sharedMemCacheSize = blockDim.x * blockDim.y * blockDim.z * sizeof(Node3D);
 
 
 	initBuffers();
@@ -1296,8 +1294,8 @@ void LBM3D_1D_indices::doStepCUDA() {
 
 	// ============================================= collision step CUDA
 	//collisionStepKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities);
-	collisionStepKernelShared << <gridDim, blockDim >> > (d_backLattice, d_velocities);
-	//collisionStepKernelStreamlinedShared << <gridDim, blockDim >> > (d_backLattice, d_velocities);
+	collisionStepKernelShared << <gridDim, blockDim, sharedMemCacheSize >> > (d_backLattice, d_velocities);
+	//collisionStepKernelStreamlinedShared << <gridDim, blockDim, sharedMemCacheSize >> > (d_backLattice, d_velocities);
 
 	//CHECK_ERROR(cudaPeekAtLastError());
 	

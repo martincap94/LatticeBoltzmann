@@ -11,8 +11,6 @@
 #include <omp.h>
 
 
-//#define BLOCK_DIM 512
-
 
 __constant__ int d_latticeWidth;
 __constant__ int d_latticeHeight;
@@ -25,6 +23,17 @@ __constant__ int d_mirrorSides;
 __device__ int d_respawnIndex = 0;
 __constant__ int d_respawnMinY;
 __constant__ int d_respawnMaxY;
+
+__constant__ glm::vec3 d_directionVectors[NUM_2D_DIRECTIONS];
+
+
+// uniform random between 0.0 and 1.0
+__device__ float rand2D(int x, int y) {
+	int n = x + y * 57;
+	n = (n << 13) ^ n;
+
+	return ((1.0f - ((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0f) + 1.0f) * 0.5f;
+}
 
 
 
@@ -45,45 +54,7 @@ __device__ __host__ glm::vec3 mapToViridis(float val) {
 }
 
 
-
-__global__ void moveParticlesKernel(glm::vec3 *particleVertices, glm::vec2 *velocities, int *numParticles) {
-
-
-	glm::vec2 adjVelocities[4];
-	int idx = threadIdx.x + blockDim.x * blockIdx.x;
-
-	while (idx < *numParticles) {
-		float x = particleVertices[idx].x;
-		float y = particleVertices[idx].y;
-
-
-		int leftX = (int)x;
-		int rightX = leftX + 1;
-		int bottomY = (int)y;
-		int topY = bottomY + 1;
-
-		adjVelocities[0] = velocities[getIdxKernel(leftX, topY)];
-		adjVelocities[1] = velocities[getIdxKernel(rightX, topY)];
-		adjVelocities[2] = velocities[getIdxKernel(leftX, bottomY)];
-		adjVelocities[3] = velocities[getIdxKernel(rightX, bottomY)];
-
-		float horizontalRatio = x - leftX;
-		float verticalRatio = y - bottomY;
-
-		glm::vec2 topVelocity = adjVelocities[0] * horizontalRatio + adjVelocities[1] * (1.0f - horizontalRatio);
-		glm::vec2 bottomVelocity = adjVelocities[2] * horizontalRatio + adjVelocities[3] * (1.0f - horizontalRatio);
-
-		glm::vec2 finalVelocity = bottomVelocity * verticalRatio + topVelocity * (1.0f - verticalRatio);
-
-		particleVertices[idx] += glm::vec3(finalVelocity, 0.0f);
-
-		idx += blockDim.x * gridDim.x;
-
-
-	}
-}
-
-__global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *velocities, int *numParticles, glm::vec3 *particleColors) {
+__global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec2 *velocities, int *numParticles, glm::vec3 *particleColors) {
 
 
 	glm::vec2 adjVelocities[4];
@@ -114,64 +85,43 @@ __global__ void moveParticlesKernelInterop(float3 *particleVertices, glm::vec2 *
 
 
 
-		//particleVertices[idx] += make_float3(finalVelocity.x, 0.0f);
 		particleVertices[idx].x += finalVelocity.x;
 		particleVertices[idx].y += finalVelocity.y;
 
-
-		//particleColors[idx] = glm::vec3(glm::length2(finalVelocity) * 4.0f);
-		//particleColors[idx] = mapToColor(glm::length2(finalVelocity) * 4.0f);
+		// Save mapped particle color to separate VBO
 		particleColors[idx] = mapToViridis(glm::length2(finalVelocity) * 4.0f);
 
 		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
 			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1) {
 			if (d_mirrorSides) {
 				if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1) {
-					//particleVertices[idx] = glm::vec3(0, d_respawnIndex++, 0.0f);
 					particleVertices[idx].x = 0.0f;
-					particleVertices[idx].y = d_respawnIndex++;
-					//particleVertices[idx].z = 0.0f;
-					if (d_respawnIndex >= d_respawnMaxY) {
-						d_respawnIndex = d_respawnMinY;
-					}
+					particleVertices[idx].y = rand2D(threadIdx.x, y) * (d_latticeHeight - 1);
+					
+					////particleVertices[idx].y = d_respawnIndex++;
+					//particleVertices[idx].y = d_respawnIndex;
+					//atomicAdd(&d_respawnIndex, 1);
+					//if (d_respawnIndex >= d_respawnMaxY) {
+					//	//d_respawnIndex = d_respawnMinY;
+					//	atomicExch(&d_respawnIndex, d_respawnMinY);
+					//}
 				} else {
-					//particleVertices[idx] = glm::vec3(x, (int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1), 0.0f);
-					//particleVertices[idx].x = x;
 					particleVertices[idx].y = (int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1);
-					//particleVertices[idx].z = 0.0f;
 				}
-				//particleVertices[idx].z = 0.0f;
 			} else {
-				//particleVertices[idx] = glm::vec3(0, respawnIndex++, 0.0f);
 				particleVertices[idx].x = 0.0f;
-				particleVertices[idx].y = d_respawnIndex++;
-				//particleVertices[idx].z = 0.0f;
-				if (d_respawnIndex >= d_respawnMaxY) {
-					d_respawnIndex = d_respawnMinY;
-				}
+				particleVertices[idx].y = rand2D(threadIdx.x, y) * (d_latticeHeight - 1);
+
+				////particleVertices[idx].y = d_respawnIndex++;
+				//particleVertices[idx].y = d_respawnIndex;
+				//atomicAdd(&d_respawnIndex, 1);
+				//if (d_respawnIndex >= d_respawnMaxY) {
+				//	//d_respawnIndex = d_respawnMinY;
+				//	atomicExch(&d_respawnIndex, d_respawnMinY);
+				//}
 			}
 			particleVertices[idx].z = 0.0f;
 		}
-
-		//if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
-		//	particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1) {
-		//	if (d_mirrorSides) {
-		//		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1) {
-		//			//particleVertices[idx] = glm::vec3(0, respawnIdx++, 0.0f);
-		//			particleVertices[idx].x = 0.0f;
-		//			//particleVertices[idx].z = 0.0f;
-		//		} else {
-		//			//particleVertices[i] = glm::vec3(particleVertices[i].x, (int)(particleVertices[i].y + d_latticeHeight - 1) % (d_latticeHeight - 1), 0.0f);
-		//			particleVertices[idx].y = (float)((int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1));
-		//			//particleVertices[idx].z = 0.0f;
-		//		}
-		//	} else {
-		//		//particleVertices[i] = glm::vec3(0, respawnIdx++, 0.0f);
-		//		particleVertices[idx].x = 0.0f;
-		//		particleVertices[idx].z = 0.0f;
-
-		//	}
-		//}
 
 		idx += blockDim.x * gridDim.x;
 
@@ -254,71 +204,58 @@ __global__ void updateInletsKernel(Node *lattice, glm::vec3 inletVelocity) {
 
 	float macroDensity = 1.0f;
 
-	//glm::vec3 macroVelocity = inletVelocity; // unnecessary variable -> remove
-
-	const glm::vec3 vRight = glm::vec3(1.0f, 0.0f, 0.0f);
-	const glm::vec3 vTop = glm::vec3(0.0f, 1.0f, 0.0f);
-	const glm::vec3 vLeft = glm::vec3(-1.0f, 0.0f, 0.0f);
-	const glm::vec3 vBottom = glm::vec3(0.0f, -1.0f, 0.0f);
-	const glm::vec3 vTopRight = glm::vec3(1.0f, 1.0f, 0.0f);
-	const glm::vec3 vTopLeft = glm::vec3(-1.0f, 1.0f, 0.0f);
-	const glm::vec3 vBottomLeft = glm::vec3(-1.0f, -1.0f, 0.0f);
-	const glm::vec3 vBottomRight = glm::vec3(1.0f, -1.0f, 0.0f);
-
 	// let's find the equilibrium
 	float leftTermMiddle = weightMiddle * macroDensity;
 	float leftTermAxis = weightAxis * macroDensity;
 	float leftTermDiagonal = weightDiagonal * macroDensity;
 
-	// optimize these operations later
 
 	float macroVelocityDot = glm::dot(inletVelocity, inletVelocity);
 	float thirdTerm = 1.5f * macroVelocityDot / LAT_SPEED_SQ;
 
 	float middleEq = leftTermMiddle + leftTermMiddle * (-thirdTerm);
 
-	// this can all be rewritten into arrays + for cycles!
-	float dotProd = glm::dot(vRight, inletVelocity);
+	float dotProd = glm::dot(d_directionVectors[DIR_RIGHT], inletVelocity);
 	float firstTerm = 3.0f * dotProd / LAT_SPEED;
 	float secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float rightEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
-	dotProd = glm::dot(vTop, inletVelocity);
+	dotProd = glm::dot(d_directionVectors[DIR_TOP], inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float topEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
-	dotProd = glm::dot(vLeft, inletVelocity);
+	dotProd = glm::dot(d_directionVectors[DIR_LEFT], inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float leftEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(vBottom, inletVelocity);
+	dotProd = glm::dot(d_directionVectors[DIR_BOTTOM], inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float bottomEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(vTopRight, inletVelocity);
+	dotProd = glm::dot(d_directionVectors[DIR_TOP_RIGHT], inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float topRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(vTopLeft, inletVelocity);
+	dotProd = glm::dot(d_directionVectors[DIR_TOP_LEFT], inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float topLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(vBottomLeft, inletVelocity);
+	dotProd = glm::dot(d_directionVectors[DIR_BOTTOM_LEFT], inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float bottomLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-	dotProd = glm::dot(vBottomRight, inletVelocity);
+	dotProd = glm::dot(d_directionVectors[DIR_BOTTOM_RIGHT], inletVelocity);
 	firstTerm = 3.0f * dotProd / LAT_SPEED;
 	secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 	float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
@@ -387,7 +324,7 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x; // 1D array kernel
 	int cacheIdx = threadIdx.x;
 
-	__shared__ Node cache[BLOCK_DIM];
+	extern __shared__ Node cache[];
 
 
 	if (idx < d_latticeSize) {
@@ -400,30 +337,22 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 			macroDensity += cache[cacheIdx].adj[i];
 		}
 
-		const glm::vec3 vRight = glm::vec3(1.0f, 0.0f, 0.0f);
-		const glm::vec3 vTop = glm::vec3(0.0f, 1.0f, 0.0f);
-		const glm::vec3 vLeft = glm::vec3(-1.0f, 0.0f, 0.0f);
-		const glm::vec3 vBottom = glm::vec3(0.0f, -1.0f, 0.0f);
-		const glm::vec3 vTopRight = glm::vec3(1.0f, 1.0f, 0.0f);
-		const glm::vec3 vTopLeft = glm::vec3(-1.0f, 1.0f, 0.0f);
-		const glm::vec3 vBottomLeft = glm::vec3(-1.0f, -1.0f, 0.0f);
-		const glm::vec3 vBottomRight = glm::vec3(1.0f, -1.0f, 0.0f);
-
 		glm::vec3 macroVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
 
-		macroVelocity += LAT_SPEED * vRight * cache[cacheIdx].adj[DIR_RIGHT];
-		macroVelocity += LAT_SPEED * vTop * cache[cacheIdx].adj[DIR_TOP];
-		macroVelocity += LAT_SPEED * vLeft * cache[cacheIdx].adj[DIR_LEFT];
-		macroVelocity += LAT_SPEED * vBottom * cache[cacheIdx].adj[DIR_BOTTOM];
-		macroVelocity += LAT_SPEED * vTopRight * cache[cacheIdx].adj[DIR_TOP_RIGHT];
-		macroVelocity += LAT_SPEED * vTopLeft * cache[cacheIdx].adj[DIR_TOP_LEFT];
-		macroVelocity += LAT_SPEED * vBottomLeft * cache[cacheIdx].adj[DIR_BOTTOM_LEFT];
-		macroVelocity += LAT_SPEED * vBottomRight * cache[cacheIdx].adj[DIR_BOTTOM_RIGHT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_RIGHT] * cache[cacheIdx].adj[DIR_RIGHT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_TOP] * cache[cacheIdx].adj[DIR_TOP];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_LEFT] * cache[cacheIdx].adj[DIR_LEFT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_BOTTOM] * cache[cacheIdx].adj[DIR_BOTTOM];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_TOP_RIGHT] * cache[cacheIdx].adj[DIR_TOP_RIGHT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_TOP_LEFT] * cache[cacheIdx].adj[DIR_TOP_LEFT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_BOTTOM_LEFT] * cache[cacheIdx].adj[DIR_BOTTOM_LEFT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_BOTTOM_RIGHT] * cache[cacheIdx].adj[DIR_BOTTOM_RIGHT];
 		macroVelocity /= macroDensity;
 
 
-		velocities[idx] = glm::vec2(macroVelocity.x, macroVelocity.y);
-
+		//velocities[idx] = glm::vec2(macroVelocity.x, macroVelocity.y);
+		velocities[idx].x = macroVelocity.x;
+		velocities[idx].y = macroVelocity.y;
 
 
 		// let's find the equilibrium
@@ -433,53 +362,52 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 
 		// optimize these operations later
 
-		float macroVelocityDot = glm::dot(macroVelocity, macroVelocity);
-		float thirdTerm = 1.5f * macroVelocityDot / LAT_SPEED_SQ;
+		float thirdTerm = 1.5f * glm::dot(macroVelocity, macroVelocity) / LAT_SPEED_SQ;
 
 		float middleEq = leftTermMiddle + leftTermMiddle * (-thirdTerm);
 
 		// this can all be rewritten into arrays + for cycles!
-		float dotProd = glm::dot(vRight, macroVelocity);
+		float dotProd = glm::dot(d_directionVectors[DIR_RIGHT], macroVelocity);
 		float firstTerm = 3.0f * dotProd / LAT_SPEED;
 		float secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 		float rightEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
-		dotProd = glm::dot(vTop, macroVelocity);
+		dotProd = glm::dot(d_directionVectors[DIR_TOP], macroVelocity);
 		firstTerm = 3.0f * dotProd / LAT_SPEED;
 		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 		float topEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
-		dotProd = glm::dot(vLeft, macroVelocity);
+		dotProd = glm::dot(d_directionVectors[DIR_LEFT], macroVelocity);
 		firstTerm = 3.0f * dotProd / LAT_SPEED;
 		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 		float leftEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-		dotProd = glm::dot(vBottom, macroVelocity);
+		dotProd = glm::dot(d_directionVectors[DIR_BOTTOM], macroVelocity);
 		firstTerm = 3.0f * dotProd / LAT_SPEED;
 		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 		float bottomEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
 
 
-		dotProd = glm::dot(vTopRight, macroVelocity);
+		dotProd = glm::dot(d_directionVectors[DIR_TOP_RIGHT], macroVelocity);
 		firstTerm = 3.0f * dotProd / LAT_SPEED;
 		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 		float topRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-		dotProd = glm::dot(vTopLeft, macroVelocity);
+		dotProd = glm::dot(d_directionVectors[DIR_TOP_LEFT], macroVelocity);
 		firstTerm = 3.0f * dotProd / LAT_SPEED;
 		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 		float topLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-		dotProd = glm::dot(vBottomLeft, macroVelocity);
+		dotProd = glm::dot(d_directionVectors[DIR_BOTTOM_LEFT], macroVelocity);
 		firstTerm = 3.0f * dotProd / LAT_SPEED;
 		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 		float bottomLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
 
 
-		dotProd = glm::dot(vBottomRight, macroVelocity);
+		dotProd = glm::dot(d_directionVectors[DIR_BOTTOM_RIGHT], macroVelocity);
 		firstTerm = 3.0f * dotProd / LAT_SPEED;
 		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
 		float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
@@ -513,10 +441,10 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 
 
 
-LBM2D_1D_indices::LBM2D_1D_indices() {
-}
+LBM2D_1D_indices::LBM2D_1D_indices() {}
 
-LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem) : LBM(dim, sceneFilename, tau), particleSystem(particleSystem) {
+
+LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads) : LBM(dim, sceneFilename, tau), particleSystem(particleSystem), numThreads(numThreads) {
 	
 
 	initScene();
@@ -536,6 +464,7 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 	cudaMemcpyToSymbol(d_tau, &tau, sizeof(float));
 	cudaMemcpyToSymbol(d_itau, &itau, sizeof(float));
 	cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
+	cudaMemcpyToSymbol(d_directionVectors, &directionVectors, sizeof(glm::vec3) * NUM_2D_DIRECTIONS);
 
 
 
@@ -551,6 +480,8 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 	cudaMemcpy(d_backLattice, backLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+
+	numBlocks = ceil(latticeSize / this->numThreads);
 
 }
 
@@ -692,7 +623,6 @@ void LBM2D_1D_indices::doStep() {
 	updateColliders();
 
 	collisionStep();
-
 	//collisionStepStreamlined();
 
 	moveParticles();
@@ -706,23 +636,23 @@ void LBM2D_1D_indices::doStepCUDA() {
 
 
 	// ============================================= clear back lattice CUDA
-	clearBackLatticeKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice);
+	clearBackLatticeKernel << <numBlocks, numThreads >> > (d_backLattice);
 
 	// ============================================= update inlets CUDA
-	updateInletsKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, inletVelocity);
+	updateInletsKernel << <numBlocks, numThreads >> > (d_backLattice, inletVelocity);
 
 	// ============================================= streaming step CUDA
-	streamingStepKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_frontLattice);
+	streamingStepKernel << <numBlocks, numThreads >> > (d_backLattice, d_frontLattice);
 
 	// ============================================= update colliders CUDA
-	updateCollidersKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_tCol);
+	updateCollidersKernel << <numBlocks, numThreads >> > (d_backLattice, d_tCol);
 
 	// ============================================= collision step CUDA
-	collisionStepKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_velocities);
+	collisionStepKernel << <numBlocks, numThreads, numThreads * sizeof(Node) >> > (d_backLattice, d_velocities);
 
 	// ============================================= move particles CUDA - different respawn from CPU !!!
 
-	float3 *dptr;
+	glm::vec3 *dptr;
 	cudaGraphicsMapResources(1, &cuda_vbo_resource, 0);
 	size_t num_bytes;
 	cudaGraphicsResourceGetMappedPointer((void **)&dptr, &num_bytes, cuda_vbo_resource);
@@ -733,7 +663,7 @@ void LBM2D_1D_indices::doStepCUDA() {
 	cudaGraphicsResourceGetMappedPointer((void **)&d_particleColors, &num_bytes, cudaParticlesColorVBO);
 
 
-	moveParticlesKernelInterop << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (dptr, d_velocities, d_numParticles, d_particleColors);
+	moveParticlesKernelInterop << <numBlocks, numThreads >> > (dptr, d_velocities, d_numParticles, d_particleColors);
 
 	cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0);
 	cudaGraphicsUnmapResources(1, &cudaParticlesColorVBO, 0);
@@ -908,7 +838,7 @@ void LBM2D_1D_indices::collisionStep() {
 
 			/*float sum = 0.0f;
 			for (int i = 0; i < 9; i++) {
-				sum += glm::dot(directionVetors[i], directionVetors[i]);
+				sum += glm::dot(directionVectors[i], directionVectors[i]);
 			}*/
 
 			float sum = 0.0f;
@@ -916,49 +846,49 @@ void LBM2D_1D_indices::collisionStep() {
 
 			sum = 0.0f;
 			for (int i = 0; i < 9; i++) {
-				sum += glm::dot(directionVetors[1], directionVetors[1]);
+				sum += glm::dot(directionVectors[1], directionVectors[1]);
 			}
 			rightTensor = sum * (backLattice[idx].adj[DIR_RIGHT] - rightEq);
 
 			sum = 0.0f;
 			for (int i = 0; i < 9; i++) {
-				sum += glm::dot(directionVetors[2], directionVetors[2]);
+				sum += glm::dot(directionVectors[2], directionVectors[2]);
 			}
 			topTensor = sum * (backLattice[idx].adj[DIR_TOP] - topEq);
 
 			sum = 0.0f;
 			for (int i = 0; i < 9; i++) {
-				sum += glm::dot(directionVetors[3], directionVetors[3]);
+				sum += glm::dot(directionVectors[3], directionVectors[3]);
 			}
 			leftTensor = sum * (backLattice[idx].adj[DIR_LEFT] - leftEq);
 
 			sum = 0.0f;
 			for (int i = 0; i < 9; i++) {
-				sum += glm::dot(directionVetors[4], directionVetors[4]);
+				sum += glm::dot(directionVectors[4], directionVectors[4]);
 			}
 			bottomTensor = sum * (backLattice[idx].adj[DIR_BOTTOM] - bottomEq);
 
 			sum = 0.0f;
 			for (int i = 0; i < 9; i++) {
-				sum += glm::dot(directionVetors[5], directionVetors[5]);
+				sum += glm::dot(directionVectors[5], directionVectors[5]);
 			}
 			topRightTensor = sum * (backLattice[idx].adj[DIR_TOP_RIGHT] - topRightEq);
 
 			sum = 0.0f;
 			for (int i = 0; i < 9; i++) {
-				sum += glm::dot(directionVetors[6], directionVetors[6]);
+				sum += glm::dot(directionVectors[6], directionVectors[6]);
 			}
 			topLeftTensor = sum * (backLattice[idx].adj[DIR_TOP_LEFT] - topLeftEq);
 
 			sum = 0.0f;
 			for (int i = 0; i < 9; i++) {
-				sum += glm::dot(directionVetors[7], directionVetors[7]);
+				sum += glm::dot(directionVectors[7], directionVectors[7]);
 			}
 			bottomLeftTensor = sum * (backLattice[idx].adj[DIR_BOTTOM_LEFT] - bottomLeftEq);
 
 			sum = 0.0f;
 			for (int i = 0; i < 9; i++) {
-				sum += glm::dot(directionVetors[8], directionVetors[8]);
+				sum += glm::dot(directionVectors[8], directionVectors[8]);
 			}
 			bottomRightTensor = sum * (backLattice[idx].adj[DIR_BOTTOM_RIGHT] - bottomRightEq);
 
@@ -1242,110 +1172,10 @@ void LBM2D_1D_indices::updateInlets() {
 				backLattice[idx].adj[i] = 1.0f;
 			}
 		}
-		//velocities[idx] = macroVelocity;
 	}
-
-
-
-
 }
 
-void LBM2D_1D_indices::updateInlets(Node *lattice) {
 
-
-
-	float weightMiddle = 4.0f / 9.0f;
-	float weightAxis = 1.0f / 9.0f;
-	float weightDiagonal = 1.0f / 36.0f;
-
-
-	float macroDensity = 1.0f;
-
-	glm::vec3 macroVelocity = inletVelocity;
-
-	// let's find the equilibrium
-	float leftTermMiddle = weightMiddle * macroDensity;
-	float leftTermAxis = weightAxis * macroDensity;
-	float leftTermDiagonal = weightDiagonal * macroDensity;
-
-	// optimize these operations later
-
-	float macroVelocityDot = glm::dot(macroVelocity, macroVelocity);
-	float thirdTerm = 1.5f * macroVelocityDot;
-
-	float middleEq = leftTermMiddle + leftTermMiddle * (-thirdTerm);
-
-	// this can all be rewritten into arrays + for cycles!
-	float dotProd = glm::dot(vRight, macroVelocity);
-	float firstTerm = 3.0f * dotProd;
-	float secondTerm = 4.5f * dotProd * dotProd;
-	float rightEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
-
-	dotProd = glm::dot(vTop, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float topEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
-
-	dotProd = glm::dot(vLeft, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float leftEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
-
-
-	dotProd = glm::dot(vBottom, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float bottomEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
-
-
-	dotProd = glm::dot(vTopRight, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float topRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
-
-
-	dotProd = glm::dot(vTopLeft, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float topLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
-
-
-	dotProd = glm::dot(vBottomLeft, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float bottomLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
-
-
-	dotProd = glm::dot(vBottomRight, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
-
-
-	for (int x = 0; x < latticeWidth; x++) {
-		for (int y = 0; y < latticeHeight; y++) {
-			int idx = getIdx(x, y);
-			lattice[idx].adj[DIR_MIDDLE] = middleEq;
-			lattice[idx].adj[DIR_RIGHT] = rightEq;
-			lattice[idx].adj[DIR_TOP] = topEq;
-			lattice[idx].adj[DIR_LEFT] = leftEq;
-			lattice[idx].adj[DIR_BOTTOM] = bottomEq;
-			lattice[idx].adj[DIR_TOP_RIGHT] = topRightEq;
-			lattice[idx].adj[DIR_TOP_LEFT] = topLeftEq;
-			lattice[idx].adj[DIR_BOTTOM_LEFT] = bottomLeftEq;
-			lattice[idx].adj[DIR_BOTTOM_RIGHT] = bottomRightEq;
-			for (int i = 0; i < 9; i++) {
-				if (lattice[idx].adj[i] < 0.0f) {
-					lattice[idx].adj[i] = 0.0f;
-				} else if (lattice[idx].adj[i] > 1.0f) {
-					lattice[idx].adj[i] = 1.0f;
-				}
-			}
-			//velocities[idx] = macroVelocity;
-		}
-	}
-
-}
 
 void LBM2D_1D_indices::updateColliders() {
 
