@@ -3,6 +3,7 @@
 
 Grid2D::Grid2D(int width, int height, int stepX, int stepY) {
 
+	printf("WIDTH = %d, HEIGHT = %d, STEPX = %d, STEPY = %d\n", width, height, stepX, stepY);
 	for (int x = 0; x < width; x += stepX) {
 		gridVertices.push_back(glm::vec3(x, 0.0f, -2.0f));
 		gridVertices.push_back(glm::vec3(x, height - 1, -2.0f));
@@ -11,6 +12,7 @@ Grid2D::Grid2D(int width, int height, int stepX, int stepY) {
 		gridVertices.push_back(glm::vec3(0.0f, y, -2.0f));
 		gridVertices.push_back(glm::vec3(width - 1, y, -2.0f));
 	}
+
 
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
@@ -23,6 +25,7 @@ Grid2D::Grid2D(int width, int height, int stepX, int stepY) {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
 	
 	glBindVertexArray(0);
+
 
 
 }

@@ -463,7 +463,6 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 
 	initScene();
 
-
 	frontLattice = new Node[latticeSize]();
 	backLattice = new Node[latticeSize]();
 	velocities = new glm::vec2[latticeSize]();
@@ -648,7 +647,6 @@ void LBM2D_1D_indices::doStep() {
 }
 
 void LBM2D_1D_indices::doStepCUDA() {
-
 
 	// ============================================= clear back lattice CUDA
 	clearBackLatticeKernel << <numBlocks, numThreads >> > (d_backLattice);

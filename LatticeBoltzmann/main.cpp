@@ -270,8 +270,11 @@ int runApp() {
 
 			projWidth = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
 			projection = glm::ortho(-1.0f, projWidth, -1.0f, projWidth, nearPlane, farPlane);
+
 			//projection = glm::ortho(-1.0f, (float)latticeWidth, -1.0f, (float)latticeHeight, nearPlane, farPlane);
-			grid = new Grid2D(latticeWidth, latticeHeight, latticeWidth / 100, latticeWidth / 100);
+			grid = new Grid2D(latticeWidth, latticeHeight, max(latticeWidth / 100, 1), max(latticeWidth / 100, 1));
+
+
 			camera = new Camera2D(glm::vec3(0.0f, 0.0f, 100.0f), WORLD_UP, -90.0f, 0.0f);
 			break;
 		case LBM3D:

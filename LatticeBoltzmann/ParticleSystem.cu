@@ -2,6 +2,8 @@
 
 #include <cuda_runtime.h>
 
+#include <iostream>
+
 #include "LBM.h"
 
 ParticleSystem::ParticleSystem() {
@@ -109,6 +111,7 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 }
 
 void ParticleSystem::initParticlePositions(int width, int height, bool *collider) {
+	cout << "Initializing particle positions." << endl;
 	int particleCount = 0;
 	float x = 0;
 	float y = 0;
@@ -129,6 +132,7 @@ void ParticleSystem::initParticlePositions(int width, int height, bool *collider
 		}
 		particleCount++;
 	}
+	cout << "Particle positions intialized!" << endl;
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles, &particleVertices[0], GL_DYNAMIC_DRAW);
