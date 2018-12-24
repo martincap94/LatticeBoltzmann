@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+* \file       OrbitCamera.h
+* \author     Martin Cap
+* \date       2018/12/23
+* \brief      Camera class for 3D LBM visualization.
+*
+*  Camera class that is used when the 3D LBM is used. Subclass of Camera.
+*
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 
 #include "Config.h"
@@ -7,7 +19,13 @@
 #include "Camera2D.h"
 #include "Camera.h"
 
-class OrbitCamera : public Camera{
+/// Camera that orbits around the given focus point.
+/**
+	Camera that is used in 3D simulation. It orbits around the given focus point.
+	Can be rotated around the focus point.
+	Furthermore, it supports setting front, side and top orthogonal views.
+*/
+class OrbitCamera : public Camera {
 public:
 
 	glm::vec3 focusPoint;		///< Point at which the camera focuses (orients toward)

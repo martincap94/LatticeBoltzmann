@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+* \file       LBM3D.h
+* \author     Martin Cap
+* \date       2018/12/23
+* \brief      Defines the LBM3D class and CUDA constants that are used in 3D simulation on GPU.
+*
+*  Defines the LBM3D class (subclass of LBM) that implements the 3D simulation using CPU and GPU.
+*
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 
 #include "Config.h"
@@ -17,6 +29,14 @@ __constant__ float WEIGHT_MIDDLE;
 __constant__ float WEIGHT_AXIS;
 __constant__ float WEIGHT_NON_AXIAL;
 
+
+/// 3D LBM simulator.
+/**
+	3D LBM simulator that supports both CPU and GPU simulations.
+	GPU (CUDA) simulation is run through global kernels that are defined in LBM3D_1D_indices.cu.
+	The LBM is indexed as a 1D array in this implementation.
+	The simulator supports particle velocity visualization.
+*/
 class LBM3D_1D_indices : public LBM {
 
 

@@ -1181,7 +1181,6 @@ void LBM2D_1D_indices::updateInlets() {
 }
 
 
-
 void LBM2D_1D_indices::updateColliders() {
 
 	for (int x = 0; x < latticeWidth; x++) {

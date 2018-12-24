@@ -122,13 +122,16 @@ void ParticleSystem::initParticlePositions(int width, int height, bool *collider
 		}
 		y++;
 		if (y >= height - 1) {
-			y = 0;
+			y = offset;
 			x++;
 		}
 		if (x >= width - 1) {
 			x = offset;
 			y = offset;
 			offset += 0.1f;
+		}
+		if (offset >= 1.0f) {
+			offset = 0.0f;
 		}
 		particleCount++;
 	}

@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+* \file       LBM2D.h
+* \author     Martin Cap
+* \date       2018/12/23
+* \brief      Defines the LBM2D class and data structures it uses (Node, directionVectors, eDirection).
+*
+*  Defines the LBM2D class (subclass of LBM) that implements the 2D simulation using CPU and GPU.
+*
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 
 #include "Config.h"
@@ -15,7 +27,7 @@
 
 // temporary -> will be moved to special header file to be shared
 // among all classes (Node -> Node2D and Node3D)
-// this applies to Node, vRight, ..., EDirection
+// this applies to Node, vRight, ..., eDirection
 /// Lattice node for 2D simulation (9 streaming directions -> 9 floats in distribution function).
 struct Node {
 	float adj[9];
@@ -46,7 +58,7 @@ const glm::vec3 directionVectors[9] = {
 
 
 /// Streaming direction enum for 2D.
-enum EDirection {
+enum eDirection {
 	DIR_MIDDLE = 0,
 	DIR_RIGHT,
 	DIR_TOP,
@@ -185,15 +197,18 @@ private:
 
 	int streamLineCounter = 0;	///< Counter of streamlines for draw calls
 
-
+	/// Precomputes respawnMinY and respawnMaxY (range, where the particles can respawn).
 	void precomputeRespawnRange();
 
+	/// Returns flattened index.
 	int getIdx(int x, int y) {
 		return x + y * latticeWidth;
 	}
 
-
+	/// Calculates macroscopic density for the lattice node.
 	float calculateMacroscopicDensity(int x, int y);
+
+	/// Calculates macroscopic velocity for the lattice ndoe with a given macroscopic density.
 	glm::vec3 calculateMacroscopicVelocity(int x, int y, float macroDensity);
 
 
