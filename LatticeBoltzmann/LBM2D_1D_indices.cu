@@ -611,7 +611,7 @@ void LBM2D_1D_indices::draw(ShaderProgram &shader) {
 	glDrawArrays(GL_LINES, 0, particleArrows.size());
 #endif
 
-	// Draw test collider
+	// Draw scene collider
 	tCol->draw(shader);
 
 
@@ -1180,102 +1180,7 @@ void LBM2D_1D_indices::updateInlets() {
 
 }
 
-void LBM2D_1D_indices::updateInlets(Node *lattice) {
 
-
-
-	float weightMiddle = 4.0f / 9.0f;
-	float weightAxis = 1.0f / 9.0f;
-	float weightDiagonal = 1.0f / 36.0f;
-
-
-	float macroDensity = 1.0f;
-
-	glm::vec3 macroVelocity = inletVelocity;
-
-	// let's find the equilibrium
-	float leftTermMiddle = weightMiddle * macroDensity;
-	float leftTermAxis = weightAxis * macroDensity;
-	float leftTermDiagonal = weightDiagonal * macroDensity;
-
-	// optimize these operations later
-
-	float macroVelocityDot = glm::dot(macroVelocity, macroVelocity);
-	float thirdTerm = 1.5f * macroVelocityDot;
-
-	float middleEq = leftTermMiddle + leftTermMiddle * (-thirdTerm);
-
-	// this can all be rewritten into arrays + for cycles!
-	float dotProd = glm::dot(vRight, macroVelocity);
-	float firstTerm = 3.0f * dotProd;
-	float secondTerm = 4.5f * dotProd * dotProd;
-	float rightEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
-
-	dotProd = glm::dot(vTop, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float topEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
-
-	dotProd = glm::dot(vLeft, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float leftEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
-
-
-	dotProd = glm::dot(vBottom, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float bottomEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
-
-
-	dotProd = glm::dot(vTopRight, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float topRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
-
-
-	dotProd = glm::dot(vTopLeft, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float topLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
-
-
-	dotProd = glm::dot(vBottomLeft, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float bottomLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
-
-
-	dotProd = glm::dot(vBottomRight, macroVelocity);
-	firstTerm = 3.0f * dotProd;
-	secondTerm = 4.5f * dotProd * dotProd;
-	float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
-
-
-	for (int x = 0; x < latticeWidth; x++) {
-		for (int y = 0; y < latticeHeight; y++) {
-			int idx = getIdx(x, y);
-			lattice[idx].adj[DIR_MIDDLE] = middleEq;
-			lattice[idx].adj[DIR_RIGHT] = rightEq;
-			lattice[idx].adj[DIR_TOP] = topEq;
-			lattice[idx].adj[DIR_LEFT] = leftEq;
-			lattice[idx].adj[DIR_BOTTOM] = bottomEq;
-			lattice[idx].adj[DIR_TOP_RIGHT] = topRightEq;
-			lattice[idx].adj[DIR_TOP_LEFT] = topLeftEq;
-			lattice[idx].adj[DIR_BOTTOM_LEFT] = bottomLeftEq;
-			lattice[idx].adj[DIR_BOTTOM_RIGHT] = bottomRightEq;
-			for (int i = 0; i < 9; i++) {
-				if (lattice[idx].adj[i] < 0.0f) {
-					lattice[idx].adj[i] = 0.0f;
-				} else if (lattice[idx].adj[i] > 1.0f) {
-					lattice[idx].adj[i] = 1.0f;
-				}
-			}
-			//velocities[idx] = macroVelocity;
-		}
-	}
-
-}
 
 void LBM2D_1D_indices::updateColliders() {
 
@@ -1339,6 +1244,7 @@ void LBM2D_1D_indices::initBuffers() {
 	glBindVertexArray(0);
 
 
+#ifdef DRAW_VELOCITY_ARROWS
 	// Velocity arrows
 	glGenVertexArrays(1, &velocityVAO);
 	glBindVertexArray(velocityVAO);
@@ -1349,6 +1255,7 @@ void LBM2D_1D_indices::initBuffers() {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
 
 	glBindVertexArray(0);
+#endif
 
 
 
@@ -1362,10 +1269,11 @@ void LBM2D_1D_indices::initBuffers() {
 
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
-#endif
-
 
 	glBindVertexArray(0);
+
+#endif
+
 
 
 }

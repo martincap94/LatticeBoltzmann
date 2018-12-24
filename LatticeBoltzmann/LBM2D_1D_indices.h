@@ -109,10 +109,19 @@ public:
 	/**
 		Constructs the simulator with given dimensions, scene, initial tau value and number of threads for launching kernels.
 		Initializes the scene and allocates CPU and GPU memory for simulation.
+		\param[in] dim				[NOT USED ANYMORE] Dimensions of the scene. Dimensions are now loaded from the scene file.
+		\param[in] sceneFilename	Filename of the scene. Scene defines the dimensions of the simulation space.
+		\param[in] tau				Initial tau simulation constant.
+		\param[in] particleSystem	Pointer to the particle system.
+		\param[in] numThreads		Number of threads per block to be used when launching CUDA kernels.
 	*/
 	LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads);
+
+	/// Frees CPU and GPU memory and unmaps CUDA graphics resources (VBOs).
 	virtual ~LBM2D_1D_indices();
 
+
+	// All the functions below inherit its doxygen documentation from the base class LBM (with some exceptions).
 
 	virtual void recalculateVariables();
 
@@ -126,46 +135,57 @@ public:
 	virtual void clearBackLattice();
 	virtual void streamingStep();
 	virtual void collisionStep();
+
+	/// Streamlined version of the collision step.
+	/**
+		Does the collision step of the simulation without using that many temporary variables and dot products (hence streamlined).
+		Was tested as possible speedup (both on CPU and GPU), unfortunately, this version is a little bit slower
+		than its original/basic counterpart.
+	*/
 	void collisionStepStreamlined();
 
 	virtual void moveParticles();
 	virtual void updateInlets();
-	void updateInlets(Node *lattice);
 	virtual void updateColliders();
 
 	virtual void resetSimulation();
 
 	virtual void updateControlProperty(eLBMControlProperty controlProperty);
 
+	/// Copies data from GPU memory back to CPU memory.
+	/**
+		Copies data from GPU memory back to CPU memory. This includes copying the particle vertices VBO back to host/CPU side.
+		This is useful when we want to switch from CUDA to CPU at runtime without changing the state of the simulation.
+	*/
 	virtual void switchToCPU();
 
 protected:
-	virtual void swapLattices();
 
+	virtual void swapLattices();
+	virtual void initBuffers();
+	virtual void initLattice();
 
 private:
 
-	int numThreads;
-	int numBlocks;
+	int numThreads;			///< Number of threads per block for kernel launches
+	int numBlocks;			///< Number of blocks in grid for kernel launches
 
-	GLuint vbo;
-	GLuint vao;
+	GLuint vbo;				///< VBO for lattice node points
+	GLuint vao;				///< VAO for lattice node points
+	
+	GLuint velocityVBO;		///< VBO for node velocity visualization
+	GLuint velocityVAO;		///< VAO for node velocity visualization
 
-	GLuint velocityVBO;
-	GLuint velocityVAO;
+	GLuint particleArrowsVAO;	///< VAO for particle velocity (arrow) visualization
+	GLuint particleArrowsVBO;	///< VBO for particle velocity (arrow) visualization
 
-	GLuint particleArrowsVAO;
-	GLuint particleArrowsVBO;
+	int respawnIndex = 0;		///< Respawn index (y coordinate) for the simulation
+	int respawnMinY;			///< Minimum y respawn coordinate (when the inlet is blocked by an obstacle)
+	int respawnMaxY;			///< Maximum y respawn coordinate (when the inlet is blocked by an obstacle)
 
-	int respawnIndex = 0;
-	int respawnMinY;
-	int respawnMaxY;
+	int streamLineCounter = 0;	///< Counter of streamlines for draw calls
 
-	int streamLineCounter = 0;
 
-	void initBuffers();
-
-	void initLattice();
 	void precomputeRespawnRange();
 
 	int getIdx(int x, int y) {

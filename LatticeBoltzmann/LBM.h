@@ -144,5 +144,9 @@ protected:
 	/// Swaps the lattice pointers (front and back) on CPU and GPU.
 	virtual void swapLattices() = 0;
 
+	virtual void initBuffers() = 0;
+
+	virtual void initLattice() = 0;
+
 };
 

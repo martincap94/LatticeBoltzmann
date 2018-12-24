@@ -121,6 +121,8 @@ public:
 protected:
 
 	virtual void swapLattices();
+	virtual void initBuffers();
+	virtual void initLattice();
 
 private:
 
@@ -146,8 +148,7 @@ private:
 	dim3 gridDim;
 	int cacheSize;
 
-	void initBuffers();
-	void initLattice();
+
 
 	float calculateMacroscopicDensity(int x, int y, int z);
 	glm::vec3 calculateMacroscopicVelocity(int x, int y, int z, float macroDensity);
