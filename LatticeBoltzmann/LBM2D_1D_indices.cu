@@ -11,9 +11,6 @@
 #include <omp.h>
 
 
-//#define BLOCK_DIM 512
-
-
 __constant__ int d_latticeWidth;
 __constant__ int d_latticeHeight;
 __constant__ int d_latticeSize;
@@ -47,7 +44,7 @@ __device__ __host__ glm::vec3 mapToColor(float val) {
 	return glm::rgbColor((1.0f - val) *  glm::hsvColor(glm::vec3(1.0f, 0.0f, 0.0f)) + val * glm::hsvColor(glm::vec3(0.0f, 1.0f, 0.0f)));
 }
 
-__device__ __host__ glm::vec3 mapToViridis(float val) {
+__device__ __host__ glm::vec3 mapToViridis2D(float val) {
 	val = glm::clamp(val, 0.0f, 1.0f);
 	int discreteVal = (int)(val * 255.0f);
 	return glm::vec3(viridis_cm[discreteVal][0], viridis_cm[discreteVal][1], viridis_cm[discreteVal][2]);
@@ -92,7 +89,7 @@ __global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec
 
 		//particleColors[idx] = glm::vec3(glm::length2(finalVelocity) * 4.0f);
 		//particleColors[idx] = mapToColor(glm::length2(finalVelocity) * 4.0f);
-		particleColors[idx] = mapToViridis(glm::length2(finalVelocity) * 4.0f);
+		particleColors[idx] = mapToViridis2D(glm::length2(finalVelocity) * 4.0f);
 
 		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
 			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1) {
@@ -461,19 +458,19 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 LBM2D_1D_indices::LBM2D_1D_indices() {
 }
 
-LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem) : LBM(dim, sceneFilename, tau), particleSystem(particleSystem) {
+LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads) : LBM(dim, sceneFilename, tau), particleSystem(particleSystem), numThreads(numThreads) {
 	
 
 	initScene();
 
 
-	frontLattice = new Node[latticeWidth * latticeHeight]();
-	backLattice = new Node[latticeWidth * latticeHeight]();
-	velocities = new glm::vec2[latticeWidth * latticeHeight]();
+	frontLattice = new Node[latticeSize]();
+	backLattice = new Node[latticeSize]();
+	velocities = new glm::vec2[latticeSize]();
 
-	cudaMalloc((void**)&d_frontLattice, sizeof(Node) * latticeWidth * latticeHeight);
-	cudaMalloc((void**)&d_backLattice, sizeof(Node) * latticeWidth * latticeHeight);
-	cudaMalloc((void**)&d_velocities, sizeof(glm::vec2) * latticeWidth * latticeHeight);
+	cudaMalloc((void**)&d_frontLattice, sizeof(Node) * latticeSize);
+	cudaMalloc((void**)&d_backLattice, sizeof(Node) * latticeSize);
+	cudaMalloc((void**)&d_velocities, sizeof(glm::vec2) * latticeSize);
 
 	cudaMemcpyToSymbol(d_latticeWidth, &latticeWidth, sizeof(int));
 	cudaMemcpyToSymbol(d_latticeHeight, &latticeHeight, sizeof(int));
@@ -485,7 +482,7 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 
 
 	cudaGraphicsGLRegisterBuffer(&cudaParticleVerticesVBO, particleSystem->vbo, cudaGraphicsMapFlagsWriteDiscard);
-	cudaGraphicsGLRegisterBuffer(&cudaParticlesColorVBO, particleSystem->colorsVBO, cudaGraphicsMapFlagsWriteDiscard);
+	cudaGraphicsGLRegisterBuffer(&cudaParticleColorsVBO, particleSystem->colorsVBO, cudaGraphicsMapFlagsWriteDiscard);
 
 
 
@@ -493,9 +490,12 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 	initLattice();
 	//updateInlets(frontLattice);
 
-	cudaMemcpy(d_backLattice, backLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_backLattice, backLattice, sizeof(Node) * latticeSize, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * latticeSize, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeSize, cudaMemcpyHostToDevice);
+
+	numBlocks = ceil(latticeSize / this->numThreads) + 1;
+
 
 }
 
@@ -550,7 +550,7 @@ LBM2D_1D_indices::~LBM2D_1D_indices() {
 	cudaFree(d_velocities);
 
 	cudaGraphicsUnregisterResource(cudaParticleVerticesVBO);
-	cudaGraphicsUnregisterResource(cudaParticlesColorVBO);
+	cudaGraphicsUnregisterResource(cudaParticleColorsVBO);
 
 }
 
@@ -570,8 +570,8 @@ void LBM2D_1D_indices::initScene() {
 
 	precomputeRespawnRange();
 
-	cudaMalloc((void**)&d_tCol, sizeof(bool) * latticeWidth * latticeHeight);
-	cudaMemcpy(d_tCol, &tCol->area[0], sizeof(bool) * latticeWidth * latticeHeight, cudaMemcpyHostToDevice);
+	cudaMalloc((void**)&d_tCol, sizeof(bool) * latticeSize);
+	cudaMemcpy(d_tCol, &tCol->area[0], sizeof(bool) * latticeSize, cudaMemcpyHostToDevice);
 
 
 	particleVertices = particleSystem->particleVertices;
@@ -651,19 +651,19 @@ void LBM2D_1D_indices::doStepCUDA() {
 
 
 	// ============================================= clear back lattice CUDA
-	clearBackLatticeKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice);
+	clearBackLatticeKernel << <numBlocks, numThreads >> > (d_backLattice);
 
 	// ============================================= update inlets CUDA
-	updateInletsKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, inletVelocity);
+	updateInletsKernel << <numBlocks, numThreads >> > (d_backLattice, inletVelocity);
 
 	// ============================================= streaming step CUDA
-	streamingStepKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_frontLattice);
+	streamingStepKernel << <numBlocks, numThreads >> > (d_backLattice, d_frontLattice);
 
 	// ============================================= update colliders CUDA
-	updateCollidersKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (d_backLattice, d_tCol);
+	updateCollidersKernel << <numBlocks, numThreads >> > (d_backLattice, d_tCol);
 
 	// ============================================= collision step CUDA
-	collisionStepKernel << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM, BLOCK_DIM * sizeof(Node) >> > (d_backLattice, d_velocities);
+	collisionStepKernel << <numBlocks, numThreads, numThreads * sizeof(Node) >> > (d_backLattice, d_velocities);
 
 	// ============================================= move particles CUDA - different respawn from CPU !!!
 
@@ -674,14 +674,14 @@ void LBM2D_1D_indices::doStepCUDA() {
 	//printf("CUDA mapped VBO: May access %ld bytes\n", num_bytes);
 
 	glm::vec3 *d_particleColors;
-	cudaGraphicsMapResources(1, &cudaParticlesColorVBO, 0);
-	cudaGraphicsResourceGetMappedPointer((void **)&d_particleColors, &num_bytes, cudaParticlesColorVBO);
+	cudaGraphicsMapResources(1, &cudaParticleColorsVBO, 0);
+	cudaGraphicsResourceGetMappedPointer((void **)&d_particleColors, &num_bytes, cudaParticleColorsVBO);
 
 
-	moveParticlesKernelInterop << <(int)((latticeWidth * latticeHeight) / BLOCK_DIM) + 1, BLOCK_DIM >> > (dptr, d_velocities, d_numParticles, d_particleColors);
+	moveParticlesKernelInterop << <numBlocks, numThreads >> > (dptr, d_velocities, d_numParticles, d_particleColors);
 
 	cudaGraphicsUnmapResources(1, &cudaParticleVerticesVBO, 0);
-	cudaGraphicsUnmapResources(1, &cudaParticlesColorVBO, 0);
+	cudaGraphicsUnmapResources(1, &cudaParticleColorsVBO, 0);
 
 	swapLattices();
 }

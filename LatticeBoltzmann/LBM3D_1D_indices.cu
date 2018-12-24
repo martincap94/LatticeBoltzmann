@@ -3,6 +3,9 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+#include <glm\gtx\norm.hpp>
+
+
 #include <iostream>
 #include "CUDAUtils.cuh"
 
@@ -34,7 +37,14 @@ __device__ float rand(int x, int y) {
 }
 
 
-__global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec3 *velocities, int *numParticles) {
+__device__ __host__ glm::vec3 mapToViridis3D(float val) {
+	val = glm::clamp(val, 0.0f, 1.0f);
+	int discreteVal = (int)(val * 255.0f);
+	return glm::vec3(viridis_cm[discreteVal][0], viridis_cm[discreteVal][1], viridis_cm[discreteVal][2]);
+}
+
+
+__global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec3 *velocities, int *numParticles, glm::vec3 *particleColors) {
 
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
 	idx += blockDim.x * blockDim.y * blockIdx.x;
@@ -82,6 +92,9 @@ __global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec
 		particleVertices[idx].x += finalVelocity.x;
 		particleVertices[idx].y += finalVelocity.y;
 		particleVertices[idx].z += finalVelocity.z;
+
+
+		particleColors[idx] = mapToViridis3D(glm::length2(finalVelocity) * 4.0f);
 
 
 		
@@ -638,7 +651,7 @@ __global__ void collisionStepKernelShared(Node3D *backLattice, glm::vec3 *veloci
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
 	idx += blockDim.x * blockDim.y * blockIdx.x;
 
-	__shared__ Node3D cache[64];
+	extern __shared__ Node3D cache[];
 	int cacheIdx = threadIdx.x + blockDim.x * threadIdx.y;
 
 
@@ -832,7 +845,7 @@ __global__ void collisionStepKernelStreamlinedShared(Node3D *backLattice, glm::v
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
 	idx += blockDim.x * blockDim.y * blockIdx.x;
 
-	__shared__ Node3D cache[256];
+	extern __shared__ Node3D cache[];
 	int cacheIdx = threadIdx.x + blockDim.x * threadIdx.y;
 
 
@@ -1111,8 +1124,8 @@ LBM3D_1D_indices::LBM3D_1D_indices() {
 
 
 
-LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem)
-	: LBM(dim, sceneFilename, tau), particleSystem(particleSystem) {
+LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, dim3 blockDim)
+	: LBM(dim, sceneFilename, tau), particleSystem(particleSystem), blockDim(blockDim) {
 
 	initScene();
 
@@ -1126,7 +1139,8 @@ LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 	cudaMalloc((void**)&d_velocities, sizeof(glm::vec3) * latticeSize);
 
 
-	cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, particleSystem->vbo, cudaGraphicsMapFlagsWriteDiscard);
+	cudaGraphicsGLRegisterBuffer(&cudaParticleVerticesVBO, particleSystem->vbo, cudaGraphicsMapFlagsWriteDiscard);
+	cudaGraphicsGLRegisterBuffer(&cudaParticleColorsVBO, particleSystem->colorsVBO, cudaGraphicsMapFlagsWriteDiscard);
 
 
 	cudaMemcpyToSymbol(dirVectorsConst, &directionVectors3D[0], 19 * sizeof(glm::vec3));
@@ -1148,10 +1162,8 @@ LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 	cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
 
 
-
-	blockDim = dim3(16, 4, 1);
-	gridDim = dim3((int)(latticeSize / (16 * 4)) + 1, 1, 1);
-
+	gridDim = dim3(ceil(latticeSize / (blockDim.x * blockDim.y * blockDim.z)) + 1, 1, 1);
+	cacheSize = blockDim.x * blockDim.y * blockDim.z * sizeof(Node3D);
 
 
 	initBuffers();
@@ -1177,7 +1189,8 @@ LBM3D_1D_indices::~LBM3D_1D_indices() {
 	cudaFree(d_backLattice);
 	cudaFree(d_velocities);
 
-	cudaGraphicsUnregisterResource(cuda_vbo_resource);
+	cudaGraphicsUnregisterResource(cudaParticleVerticesVBO);
+	cudaGraphicsUnregisterResource(cudaParticleColorsVBO);
 
 
 }
@@ -1296,8 +1309,8 @@ void LBM3D_1D_indices::doStepCUDA() {
 
 	// ============================================= collision step CUDA
 	//collisionStepKernel << <gridDim, blockDim >> > (d_backLattice, d_velocities);
-	collisionStepKernelShared << <gridDim, blockDim >> > (d_backLattice, d_velocities);
-	//collisionStepKernelStreamlinedShared << <gridDim, blockDim >> > (d_backLattice, d_velocities);
+	collisionStepKernelShared << <gridDim, blockDim, cacheSize >> > (d_backLattice, d_velocities);
+	//collisionStepKernelStreamlinedShared << <gridDim, blockDim, cacheSize >> > (d_backLattice, d_velocities);
 
 	//CHECK_ERROR(cudaPeekAtLastError());
 	
@@ -1305,17 +1318,23 @@ void LBM3D_1D_indices::doStepCUDA() {
 	// ============================================= move particles CUDA - different respawn from CPU !!!
 
 	glm::vec3 *d_particleVerticesVBO;
-	cudaGraphicsMapResources(1, &cuda_vbo_resource, 0);
+	cudaGraphicsMapResources(1, &cudaParticleVerticesVBO, 0);
 	//CHECK_ERROR(cudaPeekAtLastError());
 
 	size_t num_bytes;
-	cudaGraphicsResourceGetMappedPointer((void **)&d_particleVerticesVBO, &num_bytes, cuda_vbo_resource);
+	cudaGraphicsResourceGetMappedPointer((void **)&d_particleVerticesVBO, &num_bytes, cudaParticleVerticesVBO);
 	//printf("CUDA mapped VBO: May access %ld bytes\n", num_bytes);
 
-	moveParticlesKernelInterop << <gridDim, blockDim >> > (d_particleVerticesVBO, d_velocities, d_numParticles);
+	glm::vec3 *d_particleColors;
+	cudaGraphicsMapResources(1, &cudaParticleColorsVBO, 0);
+	cudaGraphicsResourceGetMappedPointer((void **)&d_particleColors, &num_bytes, cudaParticleColorsVBO);
+
+	moveParticlesKernelInterop << <gridDim, blockDim >> > (d_particleVerticesVBO, d_velocities, d_numParticles, d_particleColors);
 	//CHECK_ERROR(cudaPeekAtLastError());
 
-	cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0);
+	cudaGraphicsUnmapResources(1, &cudaParticleVerticesVBO, 0);
+	cudaGraphicsUnmapResources(1, &cudaParticleColorsVBO, 0);
+
 	//CHECK_ERROR(cudaPeekAtLastError());
 
 

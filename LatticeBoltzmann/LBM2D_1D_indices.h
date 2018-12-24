@@ -86,7 +86,7 @@ public:
 	LatticeCollider *tCol;
 
 	struct cudaGraphicsResource *cudaParticleVerticesVBO;
-	struct cudaGraphicsResource *cudaParticlesColorVBO;
+	struct cudaGraphicsResource *cudaParticleColorsVBO;
 
 
 	glm::vec2 *velocities;
@@ -94,7 +94,7 @@ public:
 	vector<glm::vec3> particleArrows;
 
 	LBM2D_1D_indices();
-	LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem);
+	LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads);
 	virtual ~LBM2D_1D_indices();
 
 

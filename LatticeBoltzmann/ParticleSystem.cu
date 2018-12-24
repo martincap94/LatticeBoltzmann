@@ -27,7 +27,6 @@ ParticleSystem::ParticleSystem(int numParticles, bool drawStreamlines) : numPart
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
 
-#ifdef VISUALIZE_VELOCITY
 	glGenBuffers(1, &colorsVBO);
 	glBindBuffer(GL_ARRAY_BUFFER, colorsVBO);
 	//for (int i = 0; i < numParticles; i++) {
@@ -37,7 +36,6 @@ ParticleSystem::ParticleSystem(int numParticles, bool drawStreamlines) : numPart
 
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
-#endif
 
 	glBindVertexArray(0);
 
