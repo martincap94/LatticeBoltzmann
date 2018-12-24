@@ -30,7 +30,7 @@ const glm::vec3 vTopLeft = glm::vec3(-1.0f, 1.0f, 0.0f);
 const glm::vec3 vBottomLeft = glm::vec3(-1.0f, -1.0f, 0.0f);
 const glm::vec3 vBottomRight = glm::vec3(1.0f, -1.0f, 0.0f);
 
-const glm::vec3 directionVetors[9] = {
+const glm::vec3 directionVectors[9] = {
 	glm::vec3(0.0f, 0.0f, 0.0f),
 	glm::vec3(1.0f, 0.0f, 0.0f),
 	glm::vec3(0.0f, 1.0f, 0.0f),
@@ -53,7 +53,8 @@ enum EDirection {
 	DIR_TOP_RIGHT,
 	DIR_TOP_LEFT,
 	DIR_BOTTOM_LEFT,
-	DIR_BOTTOM_RIGHT
+	DIR_BOTTOM_RIGHT,
+	NUM_2D_DIRECTIONS
 };
 
 
@@ -81,16 +82,12 @@ public:
 	glm::vec3 *particleVertices;
 	glm::vec3 *d_particleVertices;
 
-	//bool **testCollider;
-	//glm::vec3 testColliderExtent[2];
 
 	LatticeCollider *tCol;
 
-	struct cudaGraphicsResource *cuda_vbo_resource;
+	struct cudaGraphicsResource *cudaParticleVerticesVBO;
 	struct cudaGraphicsResource *cudaParticlesColorVBO;
 
-	//GLuint tcVAO;
-	//GLuint tcVBO;
 
 	glm::vec2 *velocities;
 	vector<glm::vec3> velocityArrows;
@@ -131,6 +128,9 @@ protected:
 
 
 private:
+
+	int numThreads;
+	int numBlocks;
 
 	GLuint vbo;
 	GLuint vao;
