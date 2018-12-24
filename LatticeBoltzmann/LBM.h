@@ -13,7 +13,7 @@
 #pragma once
 
 #include "ShaderProgram.h"
-
+#include "ParticleSystem.h"
 
 /**
 	LBM is the superclass of LBM simulators for this application.
@@ -28,7 +28,10 @@ public:
 		MIRROR_SIDES_PROP
 	};
 
+	ParticleSystem *particleSystem;		///< Pointer to the particle system
+	glm::vec3 *particleVertices;		///< Pointer to the particle vertices array (on CPU)
 	int *d_numParticles;	///< Number of particles on the device; managed in memory by Particle System class (its destructor)
+
 
 	int latticeWidth;		///< Width of the lattice
 	int latticeHeight;		///< Height of the lattice
@@ -59,8 +62,9 @@ public:
 		\param[in] dimensions		Dimensions of the scene: vec3(latticeWidth, latticeHeight, latticeDepth).
 		\param[in] sceneFilename	Filename of the scene.
 		\param[in] tau				Initial value of tau.
+		\param[in] particleSystem	Particle system that will be used.
 	*/
-	LBM(glm::vec3 dimensions, string sceneFilename, float tau);
+	LBM(glm::vec3 dimensions, string sceneFilename, float tau, ParticleSystem *particleSystem);
 
 	/// Default virtual destructor.
 	virtual ~LBM();
@@ -141,12 +145,19 @@ public:
 
 protected:
 
+	GLuint velocityVBO;		///< VBO for node velocity visualization
+	GLuint velocityVAO;		///< VAO for node velocity visualization
+
+	GLuint particleArrowsVAO;	///< VAO for particle velocity (arrow) visualization
+	GLuint particleArrowsVBO;	///< VBO for particle velocity (arrow) visualization
+
 	/// Swaps the lattice pointers (front and back) on CPU and GPU.
 	virtual void swapLattices() = 0;
 
-	/// Initializes OpenGL buffers for
+	/// Initializes OpenGL buffers for drawing lattice nodes and velocity arrows.
 	virtual void initBuffers() = 0;
 
+	/// Initializes the lattice with initial distribution weights.
 	virtual void initLattice() = 0;
 
 };

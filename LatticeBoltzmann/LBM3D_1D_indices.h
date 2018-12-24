@@ -87,22 +87,16 @@ class LBM3D_1D_indices : public LBM {
 public:
 
 
-	Node3D *frontLattice;
-	Node3D *backLattice;
+	Node3D *frontLattice;			///< Front lattice - the one currently drawn at end of each frame
+	Node3D *backLattice;			///< Back lattice - the one to which we prepare next frame to be drawn
 
-	Node3D *d_frontLattice;
-	Node3D *d_backLattice;
-
-	ParticleSystem *particleSystem;
-	glm::vec3 *particleVertices;
+	Node3D *d_frontLattice;			///< Device pointer for the front lattice
+	Node3D *d_backLattice;			///< Device pointer for the back lattice
 
 	glm::vec3 *velocities;
 
 	glm::vec3 *d_velocities;
 
-	bool *testCollider;
-	bool *d_testCollider;
-	vector<glm::vec3> colliderVertices;
 
 	HeightMap *heightMap;
 	float *d_heightMap;
@@ -146,31 +140,28 @@ protected:
 
 private:
 
-	int frameId = 0; // for debugging
+	int frameId = 0; ///< Frame id for debugging
 
-	int respawnY = 0;
-	int respawnZ = 0;
+	int respawnY = 0;	///< Respawn y coordinate
+	int respawnZ = 0;	///< Respawn z coordinate
 
+	/// Returns flattened index.
 	int getIdx(int x, int y, int z) {
 		return (x + latticeWidth * (y + latticeHeight * z));
 	}
 
-	GLuint velocityVBO;
-	GLuint velocityVAO;
-
-	GLuint particleArrowsVAO;
-	GLuint particleArrowsVBO;
-
 	vector<glm::vec3> velocityArrows;
 	vector<glm::vec3> particleArrows;
 
-	dim3 blockDim;
-	dim3 gridDim;
-	int cacheSize;
+	dim3 blockDim;		///< Dimension of the CUDA blocks
+	dim3 gridDim;		///< Dimension of the CUDA grid
+	int cacheSize;		///< Size of the shared memory cache (in Bytes!!!)
 
 
-
+	/// Calculates macroscopic density of the node at coordinates x, y, z.
 	float calculateMacroscopicDensity(int x, int y, int z);
+
+	/// Calculates macroscopic velocity of the node at coordinates x, y, z with the specified macroscopic density.
 	glm::vec3 calculateMacroscopicVelocity(int x, int y, int z, float macroDensity);
 
 

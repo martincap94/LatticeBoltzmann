@@ -458,7 +458,7 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 LBM2D_1D_indices::LBM2D_1D_indices() {
 }
 
-LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads) : LBM(dim, sceneFilename, tau), particleSystem(particleSystem), numThreads(numThreads) {
+LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads) : LBM(dim, sceneFilename, tau, particleSystem), numThreads(numThreads) {
 	
 
 	initScene();
@@ -1187,8 +1187,7 @@ void LBM2D_1D_indices::updateColliders() {
 		for (int y = 0; y < latticeHeight; y++) {
 			int idx = getIdx(x, y);
 
-			if (/*testCollider[row][col] ||*/ /*y == 0 || y == latticeHeight - 1 ||*/ tCol->area[idx]) {
-
+			if (tCol->area[idx]) {
 
 				float right = backLattice[idx].adj[DIR_RIGHT];
 				float top = backLattice[idx].adj[DIR_TOP];
@@ -1206,18 +1205,9 @@ void LBM2D_1D_indices::updateColliders() {
 				backLattice[idx].adj[DIR_TOP_LEFT] = bottomRight;
 				backLattice[idx].adj[DIR_BOTTOM_LEFT] = topRight;
 				backLattice[idx].adj[DIR_BOTTOM_RIGHT] = topLeft;
-
-
-				//float macroDensity = calculateMacroscopicDensity(x, y);
-				//glm::vec3 macroVelocity = calculateMacroscopicVelocity(x, y, macroDensity);
-				//velocities[idx] = macroVelocity;
-
 			}
-
-
 		}
 	}
-
 }
 
 void LBM2D_1D_indices::initBuffers() {

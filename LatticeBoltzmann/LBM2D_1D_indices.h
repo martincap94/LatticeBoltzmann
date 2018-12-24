@@ -98,11 +98,6 @@ public:
 	bool *d_tCol;				///< Device pointer to the scene collider (scene descriptor)
 
 
-
-	ParticleSystem *particleSystem;		///< Pointer to the particle system
-	glm::vec3 *particleVertices;		///< Pointer to the particle vertices array (on CPU)
-
-
 	LatticeCollider *tCol;				///< Scene collider (scene descriptor)
 
 	struct cudaGraphicsResource *cudaParticleVerticesVBO;	///< Device pointer that is mapped to particle vertices VBO
@@ -185,11 +180,6 @@ private:
 	GLuint vbo;				///< VBO for lattice node points
 	GLuint vao;				///< VAO for lattice node points
 	
-	GLuint velocityVBO;		///< VBO for node velocity visualization
-	GLuint velocityVAO;		///< VAO for node velocity visualization
-
-	GLuint particleArrowsVAO;	///< VAO for particle velocity (arrow) visualization
-	GLuint particleArrowsVBO;	///< VBO for particle velocity (arrow) visualization
 
 	int respawnIndex = 0;		///< Respawn index (y coordinate) for the simulation
 	int respawnMinY;			///< Minimum y respawn coordinate (when the inlet is blocked by an obstacle)

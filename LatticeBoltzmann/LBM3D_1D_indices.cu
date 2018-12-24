@@ -202,84 +202,6 @@ __global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec
 }
 
 
-__global__ void moveParticlesKernel(glm::vec3 *particleVertices, glm::vec3 *velocities, int *numParticles) {
-
-	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
-	idx += blockDim.x * blockDim.y * blockIdx.x;
-
-	glm::vec3 adjVelocities[8];
-
-	while (idx < *numParticles) {
-
-		float x = particleVertices[idx].x;
-		float y = particleVertices[idx].y;
-		float z = particleVertices[idx].z;
-
-		int leftX = (int)x;
-		int rightX = leftX + 1;
-		int bottomY = (int)y;
-		int topY = bottomY + 1;
-		int backZ = (int)z;
-		int frontZ = backZ + 1;
-
-		adjVelocities[0] = velocities[getIdxKer(leftX, topY, backZ)];
-		adjVelocities[1] = velocities[getIdxKer(rightX, topY, backZ)];
-		adjVelocities[2] = velocities[getIdxKer(leftX, bottomY, backZ)];
-		adjVelocities[3] = velocities[getIdxKer(rightX, bottomY, backZ)];
-		adjVelocities[4] = velocities[getIdxKer(leftX, topY, frontZ)];
-		adjVelocities[5] = velocities[getIdxKer(rightX, topY, frontZ)];
-		adjVelocities[6] = velocities[getIdxKer(leftX, bottomY, frontZ)];
-		adjVelocities[7] = velocities[getIdxKer(rightX, bottomY, frontZ)];
-
-		float horizontalRatio = x - leftX;
-		float verticalRatio = y - bottomY;
-		float depthRatio = z - backZ;
-
-		glm::vec3 topBackVelocity = adjVelocities[0] * horizontalRatio + adjVelocities[1] * (1.0f - horizontalRatio);
-		glm::vec3 bottomBackVelocity = adjVelocities[2] * horizontalRatio + adjVelocities[3] * (1.0f - horizontalRatio);
-
-		glm::vec3 backVelocity = bottomBackVelocity * verticalRatio + topBackVelocity * (1.0f - verticalRatio);
-
-		glm::vec3 topFrontVelocity = adjVelocities[4] * horizontalRatio + adjVelocities[5] * (1.0f - horizontalRatio);
-		glm::vec3 bottomFrontVelocity = adjVelocities[6] * horizontalRatio + adjVelocities[7] * (1.0f - horizontalRatio);
-
-		glm::vec3 frontVelocity = bottomFrontVelocity * verticalRatio + topFrontVelocity * (1.0f - verticalRatio);
-
-		glm::vec3 finalVelocity = backVelocity * depthRatio + frontVelocity * (1.0f - depthRatio);
-
-		particleVertices[idx] += finalVelocity;
-
-		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
-			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1 ||
-			particleVertices[idx].z <= 0.0f || particleVertices[idx].z >= d_latticeDepth - 1) {
-
-			particleVertices[idx] = glm::vec3(0.0f, d_respawnY, d_respawnZ++);
-
-			if (d_respawnZ >= d_latticeDepth - 1) {
-				d_respawnZ = 0;
-				d_respawnY++;
-			}
-			if (d_respawnY >= d_latticeHeight - 1) {
-				d_respawnY = 0;
-			}
-		}
-
-
-		//if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1) {
-		//	particleVertices[idx].x = 0.0f;
-		//} else if (particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1 ||
-		//		   particleVertices[idx].z <= 0.0f || particleVertices[idx].z >= d_latticeDepth - 1) {
-
-		//	particleVertices[idx].y = (float)((int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1));
-		//	particleVertices[idx].z = (float)((int)(particleVertices[idx].z + d_latticeDepth - 1) % (d_latticeDepth - 1));
-		//}
-
-		idx += blockDim.x * blockDim.y * gridDim.x;
-
-	}
-}
-
-
 __global__ void clearBackLatticeKernel(Node3D *backLattice) {
 
 	int idx = threadIdx.x + blockDim.x * threadIdx.y; // idx in block
@@ -1125,7 +1047,7 @@ LBM3D_1D_indices::LBM3D_1D_indices() {
 
 
 LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, dim3 blockDim)
-	: LBM(dim, sceneFilename, tau), particleSystem(particleSystem), blockDim(blockDim) {
+	: LBM(dim, sceneFilename, tau, particleSystem), blockDim(blockDim) {
 
 	initScene();
 
@@ -1234,15 +1156,6 @@ void LBM3D_1D_indices::initScene() {
 
 void LBM3D_1D_indices::draw(ShaderProgram & shader) {
 
-	//glUseProgram(shader.id);
-	//glBindVertexArray(colliderVAO);
-
-	//glPointSize(8.0f);
-	//shader.setVec3("uColor", glm::vec3(1.0f, 1.0f, 1.0f));
-
-	//glDrawArrays(GL_POINTS, 0, colliderVertices.size());
-
-
 #ifdef DRAW_VELOCITY_ARROWS
 	shader.setVec3("uColor", glm::vec3(0.2f, 0.3f, 1.0f));
 	glBindVertexArray(velocityVAO);
@@ -1323,11 +1236,11 @@ void LBM3D_1D_indices::doStepCUDA() {
 	cudaGraphicsResourceGetMappedPointer((void **)&d_particleVerticesVBO, &num_bytes, cudaParticleVerticesVBO);
 	//printf("CUDA mapped VBO: May access %ld bytes\n", num_bytes);
 
-	glm::vec3 *d_particleColors;
+	glm::vec3 *d_particleColorsVBO;
 	cudaGraphicsMapResources(1, &cudaParticleColorsVBO, 0);
-	cudaGraphicsResourceGetMappedPointer((void **)&d_particleColors, &num_bytes, cudaParticleColorsVBO);
+	cudaGraphicsResourceGetMappedPointer((void **)&d_particleColorsVBO, &num_bytes, cudaParticleColorsVBO);
 
-	moveParticlesKernelInterop << <gridDim, blockDim >> > (d_particleVerticesVBO, d_velocities, d_numParticles, d_particleColors);
+	moveParticlesKernelInterop << <gridDim, blockDim >> > (d_particleVerticesVBO, d_velocities, d_numParticles, d_particleColorsVBO);
 	//CHECK_ERROR(cudaPeekAtLastError());
 
 	cudaGraphicsUnmapResources(1, &cudaParticleVerticesVBO, 0);
