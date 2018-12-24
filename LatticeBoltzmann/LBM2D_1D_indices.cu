@@ -27,7 +27,7 @@ __constant__ glm::vec3 d_directionVectors[NUM_2D_DIRECTIONS];
 
 
 // uniform random between 0.0 and 1.0
-__device__ float rand2D(int x, int y) {
+__device__ __host__ float rand2D(int x, int y) {
 	int n = x + y * 57;
 	n = (n << 13) ^ n;
 
@@ -96,7 +96,7 @@ __global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec
 			if (d_mirrorSides) {
 				if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1) {
 					particleVertices[idx].x = 0.0f;
-					particleVertices[idx].y = rand2D(threadIdx.x, y) * (d_latticeHeight - 1);
+					particleVertices[idx].y = rand2D(idx, y) * (d_latticeHeight - 1);
 
 					////particleVertices[idx].y = d_respawnIndex++;
 					//particleVertices[idx].y = d_respawnIndex;
@@ -110,7 +110,7 @@ __global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec
 				}
 			} else {
 				particleVertices[idx].x = 0.0f;
-				particleVertices[idx].y = rand2D(threadIdx.x, y) * (d_latticeHeight - 1);
+				particleVertices[idx].y = rand2D(idx, y) * (d_latticeHeight - 1);
 
 				////particleVertices[idx].y = d_respawnIndex++;
 				//particleVertices[idx].y = d_respawnIndex;
@@ -1051,7 +1051,23 @@ void LBM2D_1D_indices::moveParticles() {
 		particleArrows.push_back(tmp);
 #endif
 
+		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
+			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1) {
+			if (mirrorSides) {
+				if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
+					particleVertices[i].x = 0.0f;
+					particleVertices[i].y = rand2D(i, y) * (latticeHeight - 1);
+				} else {
+					particleVertices[i].y = (float)((int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1));
+				}
+			} else {
+				particleVertices[i].x = 0.0f;
+				particleVertices[i].y = rand2D(i, y) * (latticeHeight - 1);
+			}
+			particleVertices[i].z = 0.0f;
+		}
 
+		/*
 		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
 			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1) {
 			if (mirrorSides) {
@@ -1076,6 +1092,7 @@ void LBM2D_1D_indices::moveParticles() {
 				}
 			}
 		}
+		*/
 	}
 	streamLineCounter++;
 	if (streamLineCounter > MAX_STREAMLINE_LENGTH) {

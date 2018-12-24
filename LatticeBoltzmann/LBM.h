@@ -145,6 +145,9 @@ public:
 
 protected:
 
+	vector<glm::vec3> velocityArrows;	///< Array describing velocity arrows (starts in node, points in velocity direction) for visualization
+	vector<glm::vec3> particleArrows;	///< Array describing velocity arrows that visualize particle velocity (interpolated values)
+
 	GLuint velocityVBO;		///< VBO for node velocity visualization
 	GLuint velocityVAO;		///< VAO for node velocity visualization
 

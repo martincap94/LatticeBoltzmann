@@ -29,7 +29,7 @@ __device__ int getIdxKer(int x, int y, int z) {
 }
 
 // uniform random between 0.0 and 1.0
-__device__ float rand(int x, int y) {
+__device__ __host__ float rand(int x, int y) {
 	int n = x + y * 57;
 	n = (n << 13) ^ n;
 
@@ -105,9 +105,9 @@ __global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec
 			
 			particleVertices[idx].x = 0.0f;
 			//particleVertices[idx].y = y;
-			particleVertices[idx].y = rand(threadIdx.x, y) * (d_latticeHeight - 1);
+			particleVertices[idx].y = rand(idx, y) * (d_latticeHeight - 1);
 			//particleVertices[idx].z = z;
-			particleVertices[idx].z = rand(threadIdx.x, z) * (d_latticeDepth - 1);
+			particleVertices[idx].z = rand(idx, z) * (d_latticeDepth - 1);
 			//particleVertices[idx].y = d_respawnY;
 			//particleVertices[idx].z = d_respawnZ++;
 
@@ -1271,16 +1271,6 @@ void LBM3D_1D_indices::clearBackLattice() {
 			backLattice[i].adj[j] = 0.0f;
 		}
 	}
-	//for (int x = 0; x < latticeWidth; x++) {
-	//	for (int y = 0; y < latticeHeight; y++) {
-	//		for (int z = 0; z < latticeDepth; z++) {
-	//			int idx = getIdx(x, y, z);
-	//			for (int i = 0; i < 19; i++) {
-	//				backLattice[idx].adj[i] = 0.0f;
-	//			}
-	//		}
-	//	}
-	//}
 #ifdef DRAW_VELOCITY_ARROWS
 	velocityArrows.clear();
 #endif
@@ -1500,7 +1490,7 @@ void LBM3D_1D_indices::collisionStep() {
 
 
 				if (useSubgridModel) {
-					// SUBGRID MODEL
+					// SUBGRID MODEL - EXPERIMENTAL - GIVES INCORRECT VALUES
 					float tensor[3][3];
 
 					float diffs[19];
@@ -1650,6 +1640,21 @@ void LBM3D_1D_indices::moveParticles() {
 		particleArrows.push_back(tmp);
 #endif
 
+
+		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
+			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1 ||
+			particleVertices[i].z <= 0.0f || particleVertices[i].z >= latticeDepth - 1) {
+
+			particleVertices[i].x = 0.0f;
+			particleVertices[i].y = rand(i, y) * (latticeHeight - 1);
+			particleVertices[i].z = rand(i, z) * (latticeDepth - 1);
+			//particleVertices[i].y = std::rand() % (latticeHeight - 1);
+			//particleVertices[i].z = std::rand() % (latticeDepth - 1);
+
+
+		}
+		// Correct respawn on CPU, incorrect on GPU -> make it selectable!!!
+		/*
 		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
 			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1 ||
 			particleVertices[i].z <= 0.0f || particleVertices[i].z >= latticeDepth - 1) {
@@ -1663,6 +1668,7 @@ void LBM3D_1D_indices::moveParticles() {
 				respawnY = 0;
 			}
 		}
+		*/
 
 	}
 }
@@ -1880,11 +1886,6 @@ void LBM3D_1D_indices::updateColliders() {
 					backLattice[idx].adj[DIR_TOP_LEFT_EDGE] = bottomRight;
 					backLattice[idx].adj[DIR_BOTTOM_RIGHT_EDGE] = topLeft;
 					backLattice[idx].adj[DIR_BOTTOM_LEFT_EDGE] = topRight;
-					/*
-										float macroDensity = calculateMacroscopicDensity(x, y, z);
-										glm::vec3 macroVelocity = calculateMacroscopicVelocity(x, y, z, macroDensity);
-										velocities[idx] = macroVelocity;
-					*/
 				}
 			}
 		}

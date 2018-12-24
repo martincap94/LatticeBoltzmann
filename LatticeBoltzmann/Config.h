@@ -16,7 +16,6 @@
 #include <cuda_runtime.h>
 
 
-// NEEDS CLEANUP !!!
 
 #define TEXTURES_DIR "textures/"
 

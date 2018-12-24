@@ -105,8 +105,6 @@ public:
 
 
 	glm::vec2 *velocities;				///< Macroscopic velocities array
-	vector<glm::vec3> velocityArrows;	///< Array describing velocity arrows (starts in node, points in velocity direction) for visualization
-	vector<glm::vec3> particleArrows;	///< Array describing velocity arrows that visualize particle velocity (interpolated values)
 
 
 	/// Default constructor.

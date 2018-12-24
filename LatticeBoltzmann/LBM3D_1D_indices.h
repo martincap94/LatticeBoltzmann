@@ -105,13 +105,29 @@ public:
 	struct cudaGraphicsResource *cudaParticleVerticesVBO;
 	struct cudaGraphicsResource *cudaParticleColorsVBO;
 
-
+	/// Default constructor.
 	LBM3D_1D_indices();
+
+	/// Constructs the simulator with given dimensions, scene, initial tau value and number of threads for launching kernels.
+	/**
+		Constructs the simulator with given dimensions, scene, initial tau value and number of threads for launching kernels.
+		Initializes the scene and allocates CPU and GPU memory for simulation.
+		\param[in] dim				[NOT USED ANYMORE] Dimensions of the scene. Dimensions are now loaded from the scene file.
+		\param[in] sceneFilename	Filename of the scene. Scene defines the dimensions of the simulation space.
+		\param[in] tau				Initial tau simulation constant.
+		\param[in] particleSystem	Pointer to the particle system.
+		\param[in] numThreads		Number of threads per block to be used when launching CUDA kernels.
+	*/
 	LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, dim3 blockDim);
+
+	/// Frees CPU and GPU memory and unmaps CUDA graphics resources (VBOs).
 	virtual ~LBM3D_1D_indices();
 
-	virtual void recalculateVariables();
 
+	// All the functions below inherit its doxygen documentation from the base class LBM (with some exceptions).
+
+
+	virtual void recalculateVariables();
 
 	virtual void initScene();
 
@@ -149,9 +165,6 @@ private:
 	int getIdx(int x, int y, int z) {
 		return (x + latticeWidth * (y + latticeHeight * z));
 	}
-
-	vector<glm::vec3> velocityArrows;
-	vector<glm::vec3> particleArrows;
 
 	dim3 blockDim;		///< Dimension of the CUDA blocks
 	dim3 gridDim;		///< Dimension of the CUDA grid
