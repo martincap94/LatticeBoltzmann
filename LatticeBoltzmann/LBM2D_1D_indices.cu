@@ -544,7 +544,6 @@ LBM2D_1D_indices::~LBM2D_1D_indices() {
 
 	cudaFree(d_frontLattice);
 	cudaFree(d_backLattice);
-	cudaFree(d_particleVertices);
 	cudaFree(d_tCol);
 	cudaFree(d_velocities);
 
@@ -577,12 +576,6 @@ void LBM2D_1D_indices::initScene() {
 	d_numParticles = particleSystem->d_numParticles;
 
 	particleSystem->initParticlePositions(latticeWidth, latticeHeight, tCol->area);
-
-
-	//cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * particleSystem->numParticles);
-	//cudaMemcpy(d_particleVertices, particleSystem->particleVertices, sizeof(glm::vec3) * particleSystem->numParticles, cudaMemcpyHostToDevice);
-
-
 
 }
 
@@ -690,8 +683,12 @@ void LBM2D_1D_indices::clearBackLattice() {
 			backLattice[i].adj[j] = 0.0f;
 		}
 	}
+#ifdef DRAW_VELOCITY_ARROWS
 	velocityArrows.clear();
+#endif
+#ifdef DRAW_PARTICLE_VELOCITY_ARROWS
 	particleArrows.clear();
+#endif
 }
 
 void LBM2D_1D_indices::streamingStep() {
@@ -764,10 +761,10 @@ void LBM2D_1D_indices::collisionStep() {
 			int idx = getIdx(x, y);
 			velocities[idx] = glm::vec2(macroVelocity.x, macroVelocity.y);
 
-
+#ifdef DRAW_VELOCITY_ARROWS
 			velocityArrows.push_back(glm::vec3(x, y, -0.5f));
 			velocityArrows.push_back(glm::vec3(velocities[idx] * 5.0f, -1.0f) + glm::vec3(x, y, 0.0f));
-
+#endif
 
 
 			// let's find the equilibrium
@@ -954,10 +951,10 @@ void LBM2D_1D_indices::collisionStepStreamlined() {
 			int idx = getIdx(x, y);
 			velocities[idx] = glm::vec2(macroVelocity.x, macroVelocity.y);
 
-
+#ifdef DRAW_VELOCITY_ARROWS
 			velocityArrows.push_back(glm::vec3(x, y, -0.5f));
 			velocityArrows.push_back(glm::vec3(velocities[idx] * 5.0f, -1.0f) + glm::vec3(x, y, 0.0f));
-
+#endif
 
 			// let's find the equilibrium
 			float leftTermMiddle = WEIGHT_MIDDLE * macroDensity;
@@ -1043,10 +1040,7 @@ void LBM2D_1D_indices::moveParticles() {
 #ifdef DRAW_PARTICLE_VELOCITY_ARROWS
 		particleArrows.push_back(particleVertices[i]);
 #endif
-		//if (particleSystem->streamLines[i].size() >= MAX_STREAMLINE_LENGTH) {
-		//	particleSystem->streamLines[i].pop_front();
-		//}
-		//particleSystem->streamLines[i].push_back(particleVertices[i]);
+
 		if (particleSystem->drawStreamlines) {
 			particleSystem->streamLines[i * MAX_STREAMLINE_LENGTH + streamLineCounter] = particleVertices[i];
 		}
@@ -1358,6 +1352,7 @@ void LBM2D_1D_indices::initBuffers() {
 
 
 
+#ifdef DRAW_PARTICLE_VELOCITY_ARROWS
 
 	// Particle arrows
 	glGenVertexArrays(1, &particleArrowsVAO);
@@ -1365,9 +1360,9 @@ void LBM2D_1D_indices::initBuffers() {
 	glGenBuffers(1, &particleArrowsVBO);
 	glBindBuffer(GL_ARRAY_BUFFER, particleArrowsVBO);
 
-
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+#endif
 
 
 	glBindVertexArray(0);

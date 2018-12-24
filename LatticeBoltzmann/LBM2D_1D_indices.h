@@ -16,11 +16,12 @@
 // temporary -> will be moved to special header file to be shared
 // among all classes (Node -> Node2D and Node3D)
 // this applies to Node, vRight, ..., EDirection
+/// Lattice node for 2D simulation (9 streaming directions -> 9 floats in distribution function).
 struct Node {
 	float adj[9];
 };
 
-
+// Streaming directions vectors
 const glm::vec3 vRight = glm::vec3(1.0f, 0.0f, 0.0f);
 const glm::vec3 vTop = glm::vec3(0.0f, 1.0f, 0.0f);
 const glm::vec3 vLeft = glm::vec3(-1.0f, 0.0f, 0.0f);
@@ -30,6 +31,7 @@ const glm::vec3 vTopLeft = glm::vec3(-1.0f, 1.0f, 0.0f);
 const glm::vec3 vBottomLeft = glm::vec3(-1.0f, -1.0f, 0.0f);
 const glm::vec3 vBottomRight = glm::vec3(1.0f, -1.0f, 0.0f);
 
+/// Streaming directions array.
 const glm::vec3 directionVectors[9] = {
 	glm::vec3(0.0f, 0.0f, 0.0f),
 	glm::vec3(1.0f, 0.0f, 0.0f),
@@ -43,7 +45,7 @@ const glm::vec3 directionVectors[9] = {
 };
 
 
-
+/// Streaming direction enum for 2D.
 enum EDirection {
 	DIR_MIDDLE = 0,
 	DIR_RIGHT,
@@ -57,43 +59,57 @@ enum EDirection {
 	NUM_2D_DIRECTIONS
 };
 
-
+/// 2D LBM simulator.
+/**
+	2D LBM simulator that supports both CPU and GPU simulations.
+	GPU (CUDA) simulation is run through global kernels that are defined in LBM2D_1D_indices.cu.
+	The LBM is indexed as a 1D array in this implementation.
+	The simulator supports particle velocity visualization. Stream line and velocity vector
+	visualizations have been deprecated.
+*/
 class LBM2D_1D_indices : public LBM {
 
-	const float WEIGHT_MIDDLE = 4.0f / 9.0f;
-	const float WEIGHT_AXIS = 1.0f / 9.0f;
-	const float WEIGHT_DIAGONAL = 1.0f / 36.0f;
+	const float WEIGHT_MIDDLE = 4.0f / 9.0f;		///< Initial weight for the middle value in distribution function
+	const float WEIGHT_AXIS = 1.0f / 9.0f;			///< Initial weight for all values in distribution function that lie on the axes
+	const float WEIGHT_DIAGONAL = 1.0f / 36.0f;		///< Initial weight for all values in distribution function that lie on the diagonal
 
 
 public:
 
-	Node *frontLattice;
-	Node *backLattice;
+	Node *frontLattice;			///< Front lattice - the one currently drawn at end of each frame
+	Node *backLattice;			///< Back lattice - the one to which we prepare next frame to be drawn
 
-	Node *d_frontLattice;
-	Node *d_backLattice;
-	glm::vec2 *d_velocities;
+	Node *d_frontLattice;		///< Device pointer for the front lattice
+	Node *d_backLattice;		///< Device pointer for the back lattice
+	glm::vec2 *d_velocities;	///< Device pointer to the velocities array
 
-	bool *d_tCol;
-
-
-
-	ParticleSystem *particleSystem;
-	glm::vec3 *particleVertices;
-	glm::vec3 *d_particleVertices;
+	bool *d_tCol;				///< Device pointer to the scene collider (scene descriptor)
 
 
-	LatticeCollider *tCol;
 
-	struct cudaGraphicsResource *cudaParticleVerticesVBO;
-	struct cudaGraphicsResource *cudaParticleColorsVBO;
+	ParticleSystem *particleSystem;		///< Pointer to the particle system
+	glm::vec3 *particleVertices;		///< Pointer to the particle vertices array (on CPU)
 
 
-	glm::vec2 *velocities;
-	vector<glm::vec3> velocityArrows;
-	vector<glm::vec3> particleArrows;
+	LatticeCollider *tCol;				///< Scene collider (scene descriptor)
 
+	struct cudaGraphicsResource *cudaParticleVerticesVBO;	///< Device pointer that is mapped to particle vertices VBO
+	struct cudaGraphicsResource *cudaParticleColorsVBO;		///< Device pointer that is mapped to particle colors VBO
+
+
+	glm::vec2 *velocities;				///< Macroscopic velocities array
+	vector<glm::vec3> velocityArrows;	///< Array describing velocity arrows (starts in node, points in velocity direction) for visualization
+	vector<glm::vec3> particleArrows;	///< Array describing velocity arrows that visualize particle velocity (interpolated values)
+
+
+	/// Default constructor.
 	LBM2D_1D_indices();
+
+	/// Constructs the simulator with given dimensions, scene, initial tau value and number of threads for launching kernels.
+	/**
+		Constructs the simulator with given dimensions, scene, initial tau value and number of threads for launching kernels.
+		Initializes the scene and allocates CPU and GPU memory for simulation.
+	*/
 	LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads);
 	virtual ~LBM2D_1D_indices();
 

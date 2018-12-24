@@ -75,7 +75,6 @@ public:
 
 	ParticleSystem *particleSystem;
 	glm::vec3 *particleVertices;
-	glm::vec3 *d_particleVertices;
 
 	glm::vec3 *velocities;
 

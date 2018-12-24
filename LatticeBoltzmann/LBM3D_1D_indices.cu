@@ -1229,8 +1229,6 @@ void LBM3D_1D_indices::initScene() {
 
 	particleSystem->initParticlePositions(latticeWidth, latticeHeight, latticeDepth);
 
-	//cudaMalloc((void**)&d_particleVertices, sizeof(glm::vec3) * particleSystem->numParticles);
-
 
 }
 
