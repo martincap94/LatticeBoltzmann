@@ -709,6 +709,11 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 			nk_checkbox_label(ctx, "Visualize velocity", &lbm->visualizeVelocity);
 		}
 
+		if (!useCUDA) {
+			nk_layout_row_dynamic(ctx, 15, 1);
+			nk_checkbox_label(ctx, "Respawn linearly", &lbm->respawnLinearly);
+		}
+
 		nk_layout_row_dynamic(ctx, 10, 1);
 		nk_labelf(ctx, NK_TEXT_LEFT, "Point size");
 		nk_slider_int(ctx, 1, &particleSystem->pointSize, 100, 1);

@@ -1051,48 +1051,48 @@ void LBM2D_1D_indices::moveParticles() {
 		particleArrows.push_back(tmp);
 #endif
 
-		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
-			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1) {
-			if (mirrorSides) {
-				if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
+		if (!respawnLinearly) {
+			if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
+				particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1) {
+				if (mirrorSides) {
+					if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
+						particleVertices[i].x = 0.0f;
+						particleVertices[i].y = rand2D(i, y) * (latticeHeight - 1);
+					} else {
+						particleVertices[i].y = (float)((int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1));
+					}
+				} else {
 					particleVertices[i].x = 0.0f;
 					particleVertices[i].y = rand2D(i, y) * (latticeHeight - 1);
-				} else {
-					particleVertices[i].y = (float)((int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1));
 				}
-			} else {
-				particleVertices[i].x = 0.0f;
-				particleVertices[i].y = rand2D(i, y) * (latticeHeight - 1);
+				particleVertices[i].z = 0.0f;
 			}
-			particleVertices[i].z = 0.0f;
-		}
-
-		/*
-		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
-			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1) {
-			if (mirrorSides) {
-				if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
+		} else {
+			if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
+				particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1) {
+				if (mirrorSides) {
+					if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
+						particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
+						if (respawnIndex >= respawnMaxY) {
+							respawnIndex = respawnMinY;
+						}
+					} else {
+						particleVertices[i] = glm::vec3(x, (int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1), 0.0f);
+					}
+				} else {
 					particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
 					if (respawnIndex >= respawnMaxY) {
 						respawnIndex = respawnMinY;
 					}
-				} else {
-					particleVertices[i] = glm::vec3(x, (int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1), 0.0f);
 				}
-			} else {
-				particleVertices[i] = glm::vec3(0, respawnIndex++, 0.0f);
-				if (respawnIndex >= respawnMaxY) {
-					respawnIndex = respawnMinY;
-				}
-			}
 
-			if (particleSystem->drawStreamlines) {
-				for (int k = 0; k < MAX_STREAMLINE_LENGTH; k++) {
-					particleSystem->streamLines[i * MAX_STREAMLINE_LENGTH + k] = particleVertices[i];
+				if (particleSystem->drawStreamlines) {
+					for (int k = 0; k < MAX_STREAMLINE_LENGTH; k++) {
+						particleSystem->streamLines[i * MAX_STREAMLINE_LENGTH + k] = particleVertices[i];
+					}
 				}
 			}
 		}
-		*/
 	}
 	streamLineCounter++;
 	if (streamLineCounter > MAX_STREAMLINE_LENGTH) {

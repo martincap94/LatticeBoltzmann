@@ -1640,35 +1640,34 @@ void LBM3D_1D_indices::moveParticles() {
 		particleArrows.push_back(tmp);
 #endif
 
+		if (!respawnLinearly) {
+			if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
+				particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1 ||
+				particleVertices[i].z <= 0.0f || particleVertices[i].z >= latticeDepth - 1) {
 
-		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
-			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1 ||
-			particleVertices[i].z <= 0.0f || particleVertices[i].z >= latticeDepth - 1) {
-
-			particleVertices[i].x = 0.0f;
-			particleVertices[i].y = rand(i, y) * (latticeHeight - 1);
-			particleVertices[i].z = rand(i, z) * (latticeDepth - 1);
-			//particleVertices[i].y = std::rand() % (latticeHeight - 1);
-			//particleVertices[i].z = std::rand() % (latticeDepth - 1);
+				particleVertices[i].x = 0.0f;
+				particleVertices[i].y = rand(i, y) * (latticeHeight - 1);
+				particleVertices[i].z = rand(i, z) * (latticeDepth - 1);
+				//particleVertices[i].y = std::rand() % (latticeHeight - 1);
+				//particleVertices[i].z = std::rand() % (latticeDepth - 1);
 
 
-		}
-		// Correct respawn on CPU, incorrect on GPU -> make it selectable!!!
-		/*
-		if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
-			particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1 ||
-			particleVertices[i].z <= 0.0f || particleVertices[i].z >= latticeDepth - 1) {
-
-			particleVertices[i] = glm::vec3(0.0f, respawnY, respawnZ++);
-			if (respawnZ >= latticeDepth - 1) {
-				respawnZ = 0;
-				respawnY++;
 			}
-			if (respawnY >= latticeHeight - 1) {
-				respawnY = 0;
+		} else {
+			if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1 ||
+				particleVertices[i].y <= 0.0f || particleVertices[i].y >= latticeHeight - 1 ||
+				particleVertices[i].z <= 0.0f || particleVertices[i].z >= latticeDepth - 1) {
+
+				particleVertices[i] = glm::vec3(0.0f, respawnY, respawnZ++);
+				if (respawnZ >= latticeDepth - 1) {
+					respawnZ = 0;
+					respawnY++;
+				}
+				if (respawnY >= latticeHeight - 1) {
+					respawnY = 0;
+				}
 			}
 		}
-		*/
 
 	}
 }
