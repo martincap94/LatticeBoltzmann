@@ -36,11 +36,11 @@
 #define MAX_STREAMLINE_LENGTH 200
 
 
-#define LAT_SPEED 1.0f							// Experimental value, only used in 2D; do not modify for stable simulation
-#define LAT_SPEED_SQ (LAT_SPEED * LAT_SPEED)	// Square of LAT_SPEED
+#define LAT_SPEED 1.0f
+#define LAT_SPEED_SQ (LAT_SPEED * LAT_SPEED)
 
 
-#define DEFAULT_CAMERA_SPEED 60.0f
+#define CAMERA_VELOCITY 60.0f
 
 #define TAU 0.55f
 #define ITAU (1.0f / TAU)

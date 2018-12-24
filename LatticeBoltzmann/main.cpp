@@ -125,8 +125,6 @@ ParticleSystem *particleSystem;		///< Pointer to the particle system that is to 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///// DEFAULT VALUES THAT ARE TO BE REWRITTEN FROM THE CONFIG FILE
-/////	-> this should be moved to more convenient/readable location
-/////		(helper namespace or class that is used only for configuration...)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 int vsync = 0;				///< VSync value
 int numParticles = 1000;	///< Number of particles
@@ -156,11 +154,7 @@ bool drawStreamlines = false;	///< Whether to draw streamlines - DRAWING STREAML
 int paused = 0;				///< Whether the simulation is paused
 int usePointSprites = 0;	///< Whether to use point sprites for point visualization
 bool appRunning = true;		///< Helper boolean to stop the application with the exit button in the user interface
-float cameraSpeed = DEFAULT_CAMERA_SPEED;	///< Movement speed of the main camera
 
-int blockDim_2D = 256;		///< Block dimension for 2D LBM
-int blockDim_3D_x = 32;		///< Block x dimension for 3D LBM
-int blockDim_3D_y = 2;		///< Block y dimension for 3D LBM
 
 
 /// Main - runs the application and sets seed for the random number generator.
@@ -172,8 +166,6 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-
-
 /// Runs the application including the game loop.
 /**
 	Creates the window, user interface and all the main parts of the simulation including the simulator itself (either
@@ -182,6 +174,20 @@ int main(int argc, char **argv) {
 	and the UI is drawn (and constructed since nuklear panel needs to be constructed in each frame).
 */
 int runApp() {
+
+	/*int ompMaxThreads = omp_get_max_threads();
+	printf("OpenMP max threads = %d\n", ompMaxThreads);
+
+	omp_set_num_threads(ompMaxThreads);
+
+
+	int count = 0;
+#pragma omp parallel num_threads(ompMaxThreads)
+	{
+#pragma omp atomic
+		count++;
+	}
+	printf_s("Number of threads: %d\n", count);*/
 
 	loadConfigFile();
 
@@ -231,7 +237,7 @@ int runApp() {
 	}
 
 #ifdef INCLUDE_STYLE
-	set_style(ctx, THEME_MARTIN); // this theme uses transparent background so we can see the simulation through the UI
+	set_style(ctx, THEME_MARTIN);
 #endif
 
 	struct nk_colorf particlesColor;
@@ -245,13 +251,13 @@ int runApp() {
 
 	float projWidth;
 
-	glm::vec3 latticeDim(latticeWidth, latticeHeight, latticeDepth);
+	glm::vec3 dim(latticeWidth, latticeHeight, latticeDepth);
 
 	// Create and configure the simulator, select from 2D and 3D options and set parameters accordingly
 	switch (lbmType) {
 		case LBM2D:
 			printf("LBM2D SETUP...\n");
-			lbm = new LBM2D_1D_indices(latticeDim, sceneFilename, tau, particleSystem, blockDim_2D);
+			lbm = new LBM2D_1D_indices(dim, sceneFilename, tau, particleSystem);
 
 			latticeWidth = lbm->latticeWidth;
 			latticeHeight = lbm->latticeHeight;
@@ -266,10 +272,7 @@ int runApp() {
 		case LBM3D:
 		default:
 			printf("LBM3D SETUP...\n");
-
-			dim3 blockDim(blockDim_3D_x, blockDim_3D_y, 1);
-
-			lbm = new LBM3D_1D_indices(latticeDim, sceneFilename, tau, particleSystem, blockDim);
+			lbm = new LBM3D_1D_indices(dim, sceneFilename, tau, particleSystem);
 
 			latticeWidth = lbm->latticeWidth;
 			latticeHeight = lbm->latticeHeight;
@@ -285,12 +288,11 @@ int runApp() {
 			break;
 	}
 	camera->setLatticeDimensions(latticeWidth, latticeHeight, latticeDepth);
-	camera->movementSpeed = cameraSpeed;
 	particleSystem->lbm = lbm;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	///// SHADERS - should be simplified with helper classes, unfortunately due to time constraints
-	/////			it has remained in this form
+	/////			it has remained in this shape
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	ShaderProgram singleColorShader("singleColor.vert", "singleColor.frag");
 	ShaderProgram singleColorShaderAlpha("singleColor.vert", "singleColor_alpha.frag");
@@ -347,7 +349,7 @@ int runApp() {
 
 	while (!glfwWindowShouldClose(window) && appRunning) {
 
-		// enable flags each frame because nuklear disables them when it is rendered
+		// enable flags each frame due to nuklear disabling them for its render call
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_LIGHTING);
 		glEnable(GL_TEXTURE_2D);
@@ -598,15 +600,9 @@ void saveConfigParam(string param, string val) {
 		drawStreamlines = (val == "true") ? true : false;
 	} else if (param == "autoplay") {
 		paused = (val == "true") ? 0 : 1;
-	} else if (param == "camera_speed") {
-		cameraSpeed = stof(val);
-	} else if (param == "block_dim_2D") {
-		blockDim_2D = stoi(val);
-	} else if (param == "block_dim_3D_x") {
-		blockDim_3D_x = stoi(val);
-	} else if (param == "block_dim_3D_y") {
-		blockDim_3D_y = stoi(val);
 	}
+
+
 }
 
 void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
@@ -711,13 +707,6 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 				nk_combo_end(ctx);
 			}
 		}
-
-		nk_layout_row_dynamic(ctx, 15, 1);
-		nk_label(ctx, "Camera movement speed", NK_TEXT_LEFT);
-		nk_slider_float(ctx, 1.0f, &camera->movementSpeed, 400.0f, 1.0f);
-
-
-
 	}
 	nk_end(ctx);
 

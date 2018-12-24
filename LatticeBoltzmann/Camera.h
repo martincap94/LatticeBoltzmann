@@ -57,7 +57,7 @@ public:
 	int latticeHeight;		///< Height of the lattice for computations
 	int latticeDepth;		///< Depth of the lattice for computations
 
-	float movementSpeed = DEFAULT_CAMERA_SPEED;	///< Movement speed of the camera
+	float movementSpeed = CAMERA_VELOCITY;	///< Movement speed of the camera
 
 
 	/// Default camera constructor

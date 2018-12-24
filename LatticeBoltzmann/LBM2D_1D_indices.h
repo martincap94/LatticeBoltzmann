@@ -16,12 +16,11 @@
 // temporary -> will be moved to special header file to be shared
 // among all classes (Node -> Node2D and Node3D)
 // this applies to Node, vRight, ..., EDirection
-/// Node of the 2D lattice.
 struct Node {
 	float adj[9];
 };
 
-// Direction vectors for the 2D simulation
+
 const glm::vec3 vRight = glm::vec3(1.0f, 0.0f, 0.0f);
 const glm::vec3 vTop = glm::vec3(0.0f, 1.0f, 0.0f);
 const glm::vec3 vLeft = glm::vec3(-1.0f, 0.0f, 0.0f);
@@ -31,8 +30,7 @@ const glm::vec3 vTopLeft = glm::vec3(-1.0f, 1.0f, 0.0f);
 const glm::vec3 vBottomLeft = glm::vec3(-1.0f, -1.0f, 0.0f);
 const glm::vec3 vBottomRight = glm::vec3(1.0f, -1.0f, 0.0f);
 
-/// Array of direction vectors for the 2D simulation.
-const glm::vec3 directionVectors[9] = {
+const glm::vec3 directionVetors[9] = {
 	glm::vec3(0.0f, 0.0f, 0.0f),
 	glm::vec3(1.0f, 0.0f, 0.0f),
 	glm::vec3(0.0f, 1.0f, 0.0f),
@@ -44,7 +42,8 @@ const glm::vec3 directionVectors[9] = {
 	glm::vec3(1.0f, -1.0f, 0.0f)
 };
 
-/// Enum of streaming directions for LBM 2D.
+
+
 enum EDirection {
 	DIR_MIDDLE = 0,
 	DIR_RIGHT,
@@ -54,16 +53,10 @@ enum EDirection {
 	DIR_TOP_RIGHT,
 	DIR_TOP_LEFT,
 	DIR_BOTTOM_LEFT,
-	DIR_BOTTOM_RIGHT,
-	NUM_2D_DIRECTIONS
+	DIR_BOTTOM_RIGHT
 };
 
-/// 2D LBM simulator class.
-/**
-	2D LBM simulator class, subclass of LBM.
-	Simulates fluids using a simple 2D scene (described with LatticeCollider class).
 
-*/
 class LBM2D_1D_indices : public LBM {
 
 	const float WEIGHT_MIDDLE = 4.0f / 9.0f;
@@ -88,19 +81,23 @@ public:
 	glm::vec3 *particleVertices;
 	glm::vec3 *d_particleVertices;
 
+	//bool **testCollider;
+	//glm::vec3 testColliderExtent[2];
 
 	LatticeCollider *tCol;
 
 	struct cudaGraphicsResource *cuda_vbo_resource;
 	struct cudaGraphicsResource *cudaParticlesColorVBO;
 
+	//GLuint tcVAO;
+	//GLuint tcVBO;
 
 	glm::vec2 *velocities;
 	vector<glm::vec3> velocityArrows;
 	vector<glm::vec3> particleArrows;
 
 	LBM2D_1D_indices();
-	LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads);
+	LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem);
 	virtual ~LBM2D_1D_indices();
 
 
@@ -120,6 +117,7 @@ public:
 
 	virtual void moveParticles();
 	virtual void updateInlets();
+	void updateInlets(Node *lattice);
 	virtual void updateColliders();
 
 	virtual void resetSimulation();
@@ -133,9 +131,6 @@ protected:
 
 
 private:
-
-	int numThreads;
-	int numBlocks;
 
 	GLuint vbo;
 	GLuint vao;
