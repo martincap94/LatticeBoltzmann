@@ -675,10 +675,12 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 			lbm->updateControlProperty(LBM::MIRROR_SIDES_PROP);
 		}
 
+#ifdef LBM_EXPERIMENTAL
 		if (lbmType == LBM3D) {
 			nk_layout_row_dynamic(ctx, 15, 1);
 			nk_checkbox_label(ctx, "Use subgrid model", &lbm->useSubgridModel);
 		}
+#endif
 
 
 

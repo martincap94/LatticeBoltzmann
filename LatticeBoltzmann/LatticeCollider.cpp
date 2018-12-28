@@ -12,7 +12,7 @@ LatticeCollider::LatticeCollider(string filename) {
 		exit(-1);
 		//return;
 	}
-	ifstream inFile(filename);
+	ifstream inFile(SCENES_DIR + filename);
 	string line;
 
 	getline(inFile, line);

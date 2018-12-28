@@ -21,7 +21,7 @@
 /// Height map that describes the terrain of 3D scenes.
 /**
 	Height map that describes the terrain of 3D scenes.
-	Loads and renders the height map.
+	Loads and renders the height map. The height map is loaded from .ppm ASCII file's red channel only!
 	It is also used as an obstacle in the LBM 3D simulation when the y coordinate of the height map is compared
 	to the lattice node y coordinate.
 */

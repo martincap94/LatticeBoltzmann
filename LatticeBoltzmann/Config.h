@@ -18,7 +18,7 @@
 
 
 #define TEXTURES_DIR "textures/"
-
+#define SCENES_DIR "scenes/"
 //#define LBM_EXPERIMENTAL // experimental features
 
 

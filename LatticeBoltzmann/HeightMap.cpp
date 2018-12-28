@@ -11,11 +11,11 @@ HeightMap::HeightMap(string filename, int latticeHeight, ShaderProgram *shader) 
 
 
 	if (filename.find(".ppm") == string::npos) {
-		cerr << "Lattice Collider only accepts .ppm files!" << endl;
+		cerr << "HeightMap only accepts .ppm files!" << endl;
 		exit(-1);
 		//return;
 	}
-	ifstream inFile(filename);
+	ifstream inFile(SCENES_DIR + filename);
 	string line;
 
 	getline(inFile, line);
