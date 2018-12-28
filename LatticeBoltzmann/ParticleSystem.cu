@@ -113,25 +113,32 @@ void ParticleSystem::draw(const ShaderProgram &shader, bool useCUDA) {
 void ParticleSystem::initParticlePositions(int width, int height, bool *collider) {
 	cout << "Initializing particle positions." << endl;
 	int particleCount = 0;
-	float x = 0;
-	float y = 0;
-	float offset = 0.1f;
+	float x = 0.0f;
+	float y = 0.0f;
+	float offset = 0.5f;
+	float xOffset = 0.0f;
+	float yOffset = 0.0f;
 	while (particleCount != numParticles) {
 		if (!collider[(int)x + width * (int)y]) {
 			particleVertices[particleCount] = glm::vec3(x, y, -1.0f);
 		}
 		y++;
 		if (y >= height - 1) {
-			y = offset;
+			y = yOffset;
 			x++;
 		}
 		if (x >= width - 1) {
-			x = offset;
-			y = offset;
-			offset += 0.1f;
+			yOffset += offset;
+			x = xOffset;
+			y = yOffset;
 		}
-		if (offset >= 1.0f) {
-			offset = 0.0f;
+		if (yOffset >= 1.0f) {
+			yOffset = 0.0f;
+			xOffset += offset;
+			if (xOffset >= 1.0f) {
+				xOffset = 0.0f;
+				offset /= 2.0f;
+			}
 		}
 		particleCount++;
 	}
@@ -141,7 +148,7 @@ void ParticleSystem::initParticlePositions(int width, int height, bool *collider
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * numParticles, &particleVertices[0], GL_DYNAMIC_DRAW);
 }
 
-void ParticleSystem::initParticlePositions(int width, int height, int depth) {
+void ParticleSystem::initParticlePositions(int width, int height, int depth, const HeightMap *hm) {
 
 
 	// generate in the left wall
@@ -149,21 +156,28 @@ void ParticleSystem::initParticlePositions(int width, int height, int depth) {
 	float x = 0.0f;
 	float y = 0.0f;
 	float z = 0.0f;
+	float xOffset = 0.1f;
+	float yOffset = 0.1f;
+	float zOffset = 0.1f;
 	while (particleCount != numParticles) {
 		// prefer depth instead of height
 		if (z >= depth - 1) {
-			z = 0.0f;
+			z = zOffset;
 			y++;
 		}
 		if (y >= height - 1) {
-			y = 0.0f;
-			z = 0.0f;
+			y = yOffset;
+			z = zOffset;
+			yOffset += 0.1f;
 			x++;
 		}
+		if (yOffset >= 1.0f) {
+			yOffset = 0.0f;
+		}
 		if (x >= width - 1) {
-			x = 0.5f;
-			y = 0.5f;
-			z = 0.5f;
+			x = xOffset;
+			y = yOffset;
+			z = zOffset;
 		}
 		particleVertices[particleCount] = glm::vec3(x, y, z++);
 

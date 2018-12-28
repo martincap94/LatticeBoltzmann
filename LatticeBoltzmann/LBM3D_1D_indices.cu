@@ -1149,7 +1149,7 @@ void LBM3D_1D_indices::initScene() {
 	particleVertices = particleSystem->particleVertices;
 	d_numParticles = particleSystem->d_numParticles;
 
-	particleSystem->initParticlePositions(latticeWidth, latticeHeight, latticeDepth);
+	particleSystem->initParticlePositions(latticeWidth, latticeHeight, latticeDepth, heightMap);
 
 
 }
@@ -1893,7 +1893,7 @@ void LBM3D_1D_indices::updateColliders() {
 
 void LBM3D_1D_indices::resetSimulation() {
 	cout << "Resetting simulation..." << endl;
-	particleSystem->initParticlePositions(latticeWidth, latticeHeight, latticeDepth);
+	particleSystem->initParticlePositions(latticeWidth, latticeHeight, latticeDepth, heightMap);
 	for (int i = 0; i < latticeWidth * latticeHeight; i++) {
 		for (int j = 0; j < 19; j++) {
 			backLattice[i].adj[j] = 0.0f;

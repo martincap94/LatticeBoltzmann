@@ -77,7 +77,7 @@ public:
 	void initParticlePositions(int width, int height, bool *collider);
 
 	/// Initializes particle positions for 3D simulation.
-	void initParticlePositions(int width, int height, int depth);
+	void initParticlePositions(int width, int height, int depth, const HeightMap *hm);
 
 	/// Copies data from VBO to CPU when we want to switch from GPU to CPU implementation.
 	void copyDataFromVBOtoCPU();
