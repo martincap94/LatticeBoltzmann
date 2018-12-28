@@ -121,6 +121,7 @@ void ParticleSystem::initParticlePositions(int width, int height, bool *collider
 	while (particleCount != numParticles) {
 		if (!collider[(int)x + width * (int)y]) {
 			particleVertices[particleCount] = glm::vec3(x, y, -1.0f);
+			particleCount++;
 		}
 		y++;
 		if (y >= height - 1) {
@@ -129,18 +130,18 @@ void ParticleSystem::initParticlePositions(int width, int height, bool *collider
 		}
 		if (x >= width - 1) {
 			yOffset += offset;
+			if (yOffset >= 1.0f) {
+				yOffset = 0.0f;
+				xOffset += offset;
+				if (xOffset >= 1.0f) {
+					xOffset = 0.0f;
+					offset /= 2.0f;
+					yOffset += offset;
+				}
+			}
 			x = xOffset;
 			y = yOffset;
 		}
-		if (yOffset >= 1.0f) {
-			yOffset = 0.0f;
-			xOffset += offset;
-			if (xOffset >= 1.0f) {
-				xOffset = 0.0f;
-				offset /= 2.0f;
-			}
-		}
-		particleCount++;
 	}
 	cout << "Particle positions intialized!" << endl;
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -156,10 +157,16 @@ void ParticleSystem::initParticlePositions(int width, int height, int depth, con
 	float x = 0.0f;
 	float y = 0.0f;
 	float z = 0.0f;
-	float xOffset = 0.1f;
-	float yOffset = 0.1f;
-	float zOffset = 0.1f;
+	float offset = 0.5f;
+	float xOffset = 0.0f;
+	float yOffset = 0.0f;
+	float zOffset = 0.0f;
 	while (particleCount != numParticles) {
+		if (hm->data[(int)x][(int)z] <= y) {
+			particleVertices[particleCount] = glm::vec3(x, y, z);
+			particleCount++;
+		}
+		z++;
 		// prefer depth instead of height
 		if (z >= depth - 1) {
 			z = zOffset;
@@ -168,20 +175,27 @@ void ParticleSystem::initParticlePositions(int width, int height, int depth, con
 		if (y >= height - 1) {
 			y = yOffset;
 			z = zOffset;
-			yOffset += 0.1f;
 			x++;
 		}
-		if (yOffset >= 1.0f) {
-			yOffset = 0.0f;
-		}
 		if (x >= width - 1) {
+			xOffset += offset;
+			if (xOffset >= 1.0f) {
+				xOffset = 0.0f;
+				yOffset += offset;
+				if (yOffset > 1.0f) {
+					yOffset = 0.0f;
+					zOffset += offset;
+					if (zOffset >= 1.0f) {
+						zOffset = 0.0f;
+						offset /= 2.0f;
+						xOffset += offset;
+					}
+				}
+			}
 			x = xOffset;
 			y = yOffset;
 			z = zOffset;
 		}
-		particleVertices[particleCount] = glm::vec3(x, y, z++);
-
-		particleCount++;
 	}
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
