@@ -192,13 +192,13 @@ int blockDim_3D_y = 2;		///< Block y dimension for 3D LBM
 
 bool measureTime = false;	///< Whether the time of simulation steps should be measured
 int avgFrameCount = 1000;	///< Number of frames for which we take time measurement average
-bool exitAfterFirstAvg = false;
+bool exitAfterFirstAvg = false;		///< Whether the application quits after the first average time measurement has finished
 
-int prevPauseKeyState = GLFW_RELEASE;
-int pauseKey = GLFW_KEY_T;
+int prevPauseKeyState = GLFW_RELEASE;	///< Pause key state from previous frame
+int pauseKey = GLFW_KEY_T;				///< Pause key
 
-int prevResetKeyState = GLFW_RELEASE;
-int resetKey = GLFW_KEY_R;
+int prevResetKeyState = GLFW_RELEASE;	///< Reset key state from previous frame
+int resetKey = GLFW_KEY_R;				///< Reset key
 
 
 /// Main - runs the application and sets seed for the random number generator.

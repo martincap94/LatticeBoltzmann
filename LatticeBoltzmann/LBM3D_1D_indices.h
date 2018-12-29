@@ -124,7 +124,7 @@ public:
 	virtual ~LBM3D_1D_indices();
 
 
-	// All the functions below inherit its doxygen documentation from the base class LBM (with some exceptions).
+	// All the virtual functions below inherit its doxygen documentation from the base class LBM (with some exceptions).
 
 
 	virtual void recalculateVariables();

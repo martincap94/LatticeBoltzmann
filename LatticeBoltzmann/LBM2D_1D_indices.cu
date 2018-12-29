@@ -11,22 +11,22 @@
 #include <omp.h>
 
 
-__constant__ int d_latticeWidth;
-__constant__ int d_latticeHeight;
-__constant__ int d_latticeSize;
-__constant__ float d_tau;
-__constant__ float d_itau;
-__constant__ int d_mirrorSides;
+__constant__ int d_latticeWidth;		///< Lattice width constant on the device
+__constant__ int d_latticeHeight;		///< Lattice height constant on the device
+__constant__ int d_latticeSize;			///< Lattice size constant on the device (latticeWidth * latticeHeight)
+__constant__ float d_tau;				///< Tau value on the device
+__constant__ float d_itau;				///< Inverse tau value (1.0f / tau) on the device
+__constant__ int d_mirrorSides;			///< Whether to mirror sides (cycle) on the device
 //__constant__ int d_visualizeVelocity;
 
-__device__ int d_respawnIndex = 0;
-__constant__ int d_respawnMinY;
-__constant__ int d_respawnMaxY;
+__device__ int d_respawnIndex = 0;		///< Respawn index (y coordinate) for particle respawn, not used
+__constant__ int d_respawnMinY;			///< Minimum y respawn coordinate, not used
+__constant__ int d_respawnMaxY;			///< Maximum y respawn coordinate, not used
 
-__constant__ glm::vec3 d_directionVectors[NUM_2D_DIRECTIONS];
+__constant__ glm::vec3 d_directionVectors[NUM_2D_DIRECTIONS];	///< Constant array of direction vectors
 
 
-// uniform random between 0.0 and 1.0
+/// Returns uniform random between 0.0 and 1.0. Provided from different student's work.
 __device__ __host__ float rand2D(int x, int y) {
 	int n = x + y * 57;
 	n = (n << 13) ^ n;
@@ -34,16 +34,13 @@ __device__ __host__ float rand2D(int x, int y) {
 	return ((1.0f - ((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0f) + 1.0f) * 0.5f;
 }
 
+/// Returns the flattened index using the device constants and provided coordinates.
 __device__ int getIdxKernel(int x, int y) {
 	return x + y * d_latticeWidth;
 }
 
-__device__ __host__ glm::vec3 mapToColor(float val) {
-	val = glm::clamp(val, 0.0f, 1.0f);
 
-	return glm::rgbColor((1.0f - val) *  glm::hsvColor(glm::vec3(1.0f, 0.0f, 0.0f)) + val * glm::hsvColor(glm::vec3(0.0f, 1.0f, 0.0f)));
-}
-
+/// Maps the value to the viridis color map.
 __device__ glm::vec3 mapToViridis2D(float val) {
 	val = glm::clamp(val, 0.0f, 1.0f);
 	int discreteVal = (int)(val * 255.0f);
@@ -51,6 +48,16 @@ __device__ glm::vec3 mapToViridis2D(float val) {
 }
 
 
+/// Kernel for moving particles that uses OpenGL interoperability.
+/**
+	Kernel for moving particles that uses OpenGL interoperability for setting particle positions and colors.
+	If the particles venture beyond the simulation bounding volume, they are randomly respawned.
+	If we use side mirroring (cycling), particles that go beyond side walls (on the y axis) will be mirrored/cycled to the other side of the bounding volume.
+	\param[in] particleVertices		Vertices (positions stored in VBO) of particles to be updated/moved.
+	\param[in] velocities			Array of velocities that will act on the particles.
+	\param[in] numParticles			Number of particles.
+	\param[in] particleColors		VBO of particle colors.
+*/
 __global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec2 *velocities, int *numParticles, glm::vec3 *particleColors) {
 
 
@@ -130,7 +137,11 @@ __global__ void moveParticlesKernelInterop(glm::vec3 *particleVertices, glm::vec
 }
 
 
-
+/// Kernel for clearing the back lattice.
+/**
+	Kernel that clears the back lattice.
+	\param[in] backLattice	Pointer to the back lattice to be cleared.
+*/
 __global__ void clearBackLatticeKernel(Node *backLattice) {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
 	if (idx < d_latticeSize) {
@@ -140,6 +151,13 @@ __global__ void clearBackLatticeKernel(Node *backLattice) {
 	}
 }
 
+
+/// Kernel that streams the microscopic particles from the previous frame.
+/**
+	Kernel that streams the microscopic particles from the previous frame.
+	\param[in] backLatice		Lattice that will be used in the current frame (the one we are currently updating).
+	\param[in] frontLattice	Lattice from the previous frame from which we stream the particles.
+*/
 __global__ void streamingStepKernel(Node *backLattice, Node *frontLattice) {
 
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
@@ -195,6 +213,15 @@ __global__ void streamingStepKernel(Node *backLattice, Node *frontLattice) {
 
 }
 
+
+/// Kernel for updating the inlets.
+/**
+	Kernel for updating the inlets. Acts the same way as collision step but with predetermined velocity and density.
+	The inlet is the left wall of the simulation bounding volume.
+	\param[in] backLattice		The back lattice where we update node values.
+	\param[in] velocities		Velocities array for the lattice.
+	\param[in] inletVelocity	Our desired inlet velocity.
+*/
 __global__ void updateInletsKernel(Node *lattice, glm::vec3 inletVelocity) {
 
 	float weightMiddle = 4.0f / 9.0f;
@@ -299,6 +326,13 @@ __global__ void updateInletsKernel(Node *lattice, glm::vec3 inletVelocity) {
 
 }
 
+/// Kernel for updating colliders/obstacles in the lattice.
+/**
+	Updates colliders/obstacles by using the full bounce back approach.
+	\param[in] backLattice		Back lattice in which we do our calculations.
+	\param[in] velocities		Velocities array for the lattice.
+	\param[in] heightMap		Height map of the scene.
+*/
 __global__ void updateCollidersKernel(Node *backLattice, bool *tCol) {
 
 
@@ -328,6 +362,13 @@ __global__ void updateCollidersKernel(Node *backLattice, bool *tCol) {
 }
 
 
+/// Kernel for calculating the collision operator.
+/**
+	Kernel that calculates the collision operator using Bhatnagar-Gross-Krook operator.
+	Uses shared memory for speedup.
+	\param[in] backLattice		Back lattice in which we do our calculations.
+	\param[in] velocities		Velocities array for the lattice.
+*/
 __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 	float weightMiddle = 4.0f / 9.0f;
 	float weightAxis = 1.0f / 9.0f;
