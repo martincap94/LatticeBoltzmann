@@ -403,7 +403,7 @@ int runApp() {
 	glUseProgram(coloredParticleShader.id);
 	coloredParticleShader.setMat4fv("uProjection", projection);
 
-	GeneralGrid gGrid(100, 5);
+	GeneralGrid gGrid(100, 5, (lbmType == LBM3D));
 
 	int frameCounter = 0;
 	glfwSwapInterval(vsync); // VSync Settings (0 is off, 1 is 60FPS, 2 is 30FPS and so on)

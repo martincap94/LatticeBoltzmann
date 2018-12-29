@@ -32,7 +32,7 @@ public:
 		\param[in] range		Range of the x/y grid.
 		\param[in] stepSize		Size of the spacing between lines in the x/y grid.
 	*/
-	GeneralGrid(int range, int stepSize);
+	GeneralGrid(int range, int stepSize, bool drawXZGrid = true);
 
 	/// Default destructor.
 	~GeneralGrid();
