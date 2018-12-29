@@ -86,6 +86,9 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 /// Mouse button callback for the window.
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 
+/// Window size changed callback.
+void window_size_callback(GLFWwindow* window, int width, int height);
+
 /// Load configuration file and parse all correct parameters.
 void loadConfigFile();
 
@@ -158,6 +161,9 @@ double lastFrameTime;		///< Duration of the last frame
 glm::mat4 view;				///< View matrix
 glm::mat4 projection;		///< Projection matrix
 
+float nearPlane = 0.1f;		///< Near plane of the view frustum
+float farPlane = 1000.0f;	///< Far plane of the view frustum
+
 int windowWidth = 1000;		///< Window width
 int windowHeight = 1000;	///< Window height
 
@@ -167,6 +173,10 @@ int screenHeight;			///< Screen height
 int latticeWidth = 100;		///< Default lattice width
 int latticeHeight = 100;	///< Default lattice height
 int latticeDepth = 100;		///< Defailt lattice depth
+
+float projWidth;			///< Width of the ortographic projection
+float projHeight;			///< Height of the ortographic projection
+float projectionRange;		///< General projection range for 3D (largest value of lattice width, height and depth)
 
 float tau = 0.52f;			///< Default tau value
 
@@ -255,8 +265,6 @@ int runApp() {
 
 	glViewport(0, 0, screenWidth, screenHeight);
 
-	float nearPlane = 0.1f;
-	float farPlane = 1000.0f;
 
 	float aspectRatio = screenWidth / screenHeight;
 
@@ -284,9 +292,9 @@ int runApp() {
 	particlesColor.b = particleSystem->particlesColor.b;
 
 
-	float projWidth;
-
 	glm::vec3 latticeDim(latticeWidth, latticeHeight, latticeDepth);
+
+	float ratio = (float)screenWidth / (float)screenHeight;
 
 	// Create and configure the simulator, select from 2D and 3D options and set parameters accordingly
 	switch (lbmType) {
@@ -298,8 +306,16 @@ int runApp() {
 			latticeHeight = lbm->latticeHeight;
 			latticeDepth = 1;
 
-			projWidth = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
-			projection = glm::ortho(-1.0f, projWidth, -1.0f, projWidth, nearPlane, farPlane);
+			if (latticeWidth >= latticeHeight) {
+				projWidth = latticeWidth;
+				projHeight = projWidth / ratio;
+			} else {
+				projHeight = latticeHeight;
+				projWidth = projHeight * ratio;
+			}
+
+			//projWidth = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
+			projection = glm::ortho(-1.0f, projWidth, -1.0f, projHeight, nearPlane, farPlane);
 
 			//projection = glm::ortho(-1.0f, (float)latticeWidth, -1.0f, (float)latticeHeight, nearPlane, farPlane);
 			grid = new Grid2D(latticeWidth, latticeHeight, max(latticeWidth / 100, 1), max(latticeWidth / 100, 1));
@@ -319,13 +335,21 @@ int runApp() {
 			latticeHeight = lbm->latticeHeight;
 			latticeDepth = lbm->latticeDepth;
 
-			float projectionRange = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
+
+
+			projectionRange = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
 			projectionRange = (projectionRange > latticeDepth) ? projectionRange : latticeDepth;
 			projectionRange /= 2.0f;
 
-			projection = glm::ortho(-projectionRange, projectionRange, -projectionRange, projectionRange, nearPlane, farPlane);
+			projHeight = projectionRange;
+			projWidth = projHeight * ratio;
+
+			//projection = glm::ortho(-projectionRange, projectionRange, -projectionRange, projectionRange, nearPlane, farPlane);
+			projection = glm::ortho(-projWidth, projWidth, -projHeight, projHeight, nearPlane, farPlane);
 			grid = new Grid3D(latticeWidth, latticeHeight, latticeDepth, 6, 6, 6);
-			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 80.0f, glm::vec3(latticeWidth / 2.0f, latticeHeight / 2.0f, latticeDepth / 2.0f));
+			float cameraRadius = sqrtf(latticeWidth * latticeWidth + latticeDepth * latticeDepth) + 10.0f;
+			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 80.0f, glm::vec3(latticeWidth / 2.0f, latticeHeight / 2.0f, latticeDepth / 2.0f), cameraRadius);
+
 			break;
 	}
 	camera->setLatticeDimensions(latticeWidth, latticeHeight, latticeDepth);
@@ -392,6 +416,7 @@ int runApp() {
 	// Set these callbacks after nuklear initialization, otherwise they won't work!
 	glfwSetScrollCallback(window, scroll_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
+	glfwSetWindowSizeCallback(window, window_size_callback);
 
 	stringstream ss;
 	ss << (useCUDA ? "GPU" : "CPU") << "_";
@@ -469,25 +494,34 @@ int runApp() {
 
 		glUseProgram(singleColorShader.id);
 		singleColorShader.setMat4fv("uView", view);
-		//singleColorShader.setMat4fv("projection", projection);
+		singleColorShader.setMat4fv("uProjection", projection);
 
 		glUseProgram(unlitColorShader.id);
 		unlitColorShader.setMat4fv("uView", view);
+		unlitColorShader.setMat4fv("uProjection", projection);
+
 
 		glUseProgram(dirLightOnlyShader.id);
 		dirLightOnlyShader.setMat4fv("uView", view);
 		dirLightOnlyShader.setVec3("vViewPos", camera->position);
+		dirLightOnlyShader.setMat4fv("uProjection", projection);
 
-		//unlitColorShader.setMat4fv("uProjection", projection);
+
 
 		glUseProgram(singleColorShaderAlpha.id);
 		singleColorShaderAlpha.setMat4fv("uView", view);
+		singleColorShaderAlpha.setMat4fv("uProjection", projection);
+
 
 		glUseProgram(pointSpriteTestShader.id);
 		pointSpriteTestShader.setMat4fv("uView", view);
+		pointSpriteTestShader.setMat4fv("uProjection", projection);
+
 
 		glUseProgram(coloredParticleShader.id);
 		coloredParticleShader.setMat4fv("uView", view);
+		coloredParticleShader.setMat4fv("uProjection", projection);
+
 
 
 		// DRAW SCENE
@@ -947,5 +981,27 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 	nk_end(ctx);
 
 
+
+}
+
+
+void window_size_callback(GLFWwindow* window, int width, int height) {
+	float ratio = (float)width / (float)height;
+
+	if (lbmType == LBM2D) {
+		if (latticeWidth >= latticeHeight) {
+			projWidth = latticeWidth;
+			projHeight = projWidth / ratio;
+		} else {
+			projHeight = latticeHeight;
+			projWidth = projHeight * ratio;
+		}
+		projection = glm::ortho(-1.0f, projWidth, -1.0f, projHeight, nearPlane, farPlane);
+	} else {
+		projHeight = projectionRange;
+		projWidth = projHeight * ratio;
+		projection = glm::ortho(-projWidth, projWidth, -projHeight, projHeight, nearPlane, farPlane);
+
+	}
 
 }

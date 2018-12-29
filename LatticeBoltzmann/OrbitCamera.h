@@ -45,8 +45,9 @@ public:
 		\param[in] yaw			Initial yaw.
 		\param[in] pitch		Initial pitch.
 		\param[in] focusPoint	Focus point of the camera towards which it orients itself.
+		\param[in] radius		Radius of the camera with which it will orbit around the focus point.
 	*/
-	OrbitCamera(glm::vec3 position, glm::vec3 up = WORLD_UP, float yaw = -90.0f, float pitch = 0.0f, glm::vec3 focusPoint = glm::vec3(0.0f));
+	OrbitCamera(glm::vec3 position, glm::vec3 up = WORLD_UP, float yaw = -90.0f, float pitch = 0.0f, glm::vec3 focusPoint = glm::vec3(0.0f), float radius = 100.0f);
 
 	/// Default destructor.
 	~OrbitCamera();

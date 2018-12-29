@@ -1,1 +1,2 @@
 number of measurements for avg = 100
+21.3744

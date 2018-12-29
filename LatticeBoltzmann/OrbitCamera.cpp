@@ -6,7 +6,8 @@
 OrbitCamera::OrbitCamera() {
 }
 
-OrbitCamera::OrbitCamera(glm::vec3 position, glm::vec3 up, float yaw, float pitch, glm::vec3 focusPoint) : Camera(position, up, yaw, pitch), focusPoint(focusPoint), initFocusPoint(focusPoint) {
+OrbitCamera::OrbitCamera(glm::vec3 position, glm::vec3 up, float yaw, float pitch, glm::vec3 focusPoint, float radius) 
+	: Camera(position, up, yaw, pitch), focusPoint(focusPoint), initFocusPoint(focusPoint), radius(radius) {
 	updateCameraVectors();
 }
 
