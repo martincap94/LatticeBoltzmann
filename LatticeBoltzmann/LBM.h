@@ -15,6 +15,7 @@
 #include "ShaderProgram.h"
 #include "ParticleSystem.h"
 
+/// The superclass of LBM simulators for this application.
 /**
 	LBM is the superclass of LBM simulators for this application.
 	It defines the particular steps (pure virtual functions) of the simulation and its variables.

@@ -19,7 +19,7 @@
 
 /// Node for LBM 3D
 struct Node3D {
-	float adj[19];
+	float adj[19];	///< Distribution function for adjacent lattice nodes (in possible streaming directions)
 };
 
 /// 3rd ordering enum as proposed by Woodgate et al.

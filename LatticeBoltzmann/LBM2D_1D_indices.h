@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /**
-* \file       LBM2D.h
+* \file       LBM2D_1D_indices.h
 * \author     Martin Cap
 * \date       2018/12/23
 * \brief      Defines the LBM2D class and data structures it uses (Node, directionVectors, eDirection).
@@ -30,7 +30,7 @@
 // this applies to Node, vRight, ..., eDirection
 /// Lattice node for 2D simulation (9 streaming directions -> 9 floats in distribution function).
 struct Node {
-	float adj[9];
+	float adj[9];	///< Distribution function for adjacent nodes (in streaming directions).
 };
 
 // Streaming directions vectors

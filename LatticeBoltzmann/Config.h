@@ -17,10 +17,10 @@
 
 
 
-#define TEXTURES_DIR "textures/"
-#define SCENES_DIR "scenes/"
-#define SHADERS_DIR "shaders/"
-#define LOG_FILENAME_BASE "logs/"
+#define TEXTURES_DIR "textures/"		///< Textures directory
+#define SCENES_DIR "scenes/"			///< Scenes directory
+#define SHADERS_DIR "shaders/"			///< Shaders directory
+#define LOG_FILENAME_BASE "logs/"		///< Logs directory
 
 //#define LBM_EXPERIMENTAL // experimental features
 
@@ -28,21 +28,21 @@
 //#define DRAW_VELOCITY_ARROWS
 //#define DRAW_PARTICLE_VELOCITY_ARROWS
 
-#define CONFIG_FILE "config.ini"
+#define CONFIG_FILE "config.ini"		///< Configuration filename
 
 
-#define MAX_STREAMLINE_LENGTH 200
+#define MAX_STREAMLINE_LENGTH 200		///< Maximum streamline length
 
 
-#define LAT_SPEED 1.0f
-#define LAT_SPEED_SQ (LAT_SPEED * LAT_SPEED)
+#define LAT_SPEED 1.0f					///< Lattice speed (experimental)
+#define LAT_SPEED_SQ (LAT_SPEED * LAT_SPEED)	///< Square root of lattice speed (experimental)
 
 
-#define DEFAULT_CAMERA_SPEED 60.0f
+#define DEFAULT_CAMERA_SPEED 60.0f		///< Default camera movement speed
 
 
 //#define SUBGRID_EXPERIMENTAL
-#define SMAG_C 0.3f
+#define SMAG_C 0.3f						///< Smagorinsky constant (experimental)
 
 
 using namespace std;

@@ -13,6 +13,7 @@
 
 #include <glm\glm.hpp>
 
+/// Direction light for simple scene lighting.
 /**
 	Directional light that lights the scene.
 	At the moment we use simple Blinn-Phong lighting, hence needing ambient, diffuse and specular values.

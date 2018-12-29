@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /**
-* \file       LBM3D.h
+* \file       LBM3D_1D_indices.h
 * \author     Martin Cap
 * \date       2018/12/23
 * \brief      Defines the LBM3D class and CUDA constants that are used in 3D simulation on GPU.
@@ -93,17 +93,17 @@ public:
 	Node3D *d_frontLattice;			///< Device pointer for the front lattice
 	Node3D *d_backLattice;			///< Device pointer for the back lattice
 
-	glm::vec3 *velocities;
+	glm::vec3 *velocities;			///< Velocities vector for the lattice
 
-	glm::vec3 *d_velocities;
-
-
-	HeightMap *heightMap;
-	float *d_heightMap;
+	glm::vec3 *d_velocities;		///< Device pointer to the velocities vector for the lattice
 
 
-	struct cudaGraphicsResource *cudaParticleVerticesVBO;
-	struct cudaGraphicsResource *cudaParticleColorsVBO;
+	HeightMap *heightMap;			///< Heightmap for the simulation
+	float *d_heightMap;				///< Device pointer to heightmap for the simulation
+
+
+	struct cudaGraphicsResource *cudaParticleVerticesVBO;	///< Device pointer to the particle vertices VBO
+	struct cudaGraphicsResource *cudaParticleColorsVBO;		///< Device pointer to the particle colors VBO
 
 	/// Default constructor.
 	LBM3D_1D_indices();
@@ -116,7 +116,7 @@ public:
 		\param[in] sceneFilename	Filename of the scene. Scene defines the dimensions of the simulation space.
 		\param[in] tau				Initial tau simulation constant.
 		\param[in] particleSystem	Pointer to the particle system.
-		\param[in] numThreads		Number of threads per block to be used when launching CUDA kernels.
+		\param[in] blockDim			Dimensions of blocks to be used when launching CUDA kernels.
 	*/
 	LBM3D_1D_indices(glm::ivec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, dim3 blockDim);
 

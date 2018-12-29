@@ -18,7 +18,10 @@
 #include <glm\glm.hpp>
 #include <glm\gtc\matrix_transform.hpp>
 
-
+/// Camera that is used for LBM 2D simulation.
+/**
+	Simple camera that is used to view the LBM 2D simulation scene.
+*/
 class Camera2D : public Camera {
 public:
 

@@ -17,6 +17,7 @@
 #include <string>
 #include "ShaderProgram.h"
 
+/// Lattice collider that is used as an obstacle in LBM 2D simulation.
 /**
 	Lattice collider is used as an obstacle in LBM 2D. It can be drawn when rendering the scene.
 */
