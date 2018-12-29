@@ -15,8 +15,8 @@ ShaderProgram::ShaderProgram(const GLchar *vsPath, const GLchar *fsPath) {
 
 	string vsCode;
 	string fsCode;
-	ifstream vsFile(vsPath);
-	ifstream fsFile(fsPath);
+	ifstream vsFile(SHADERS_DIR + string(vsPath));
+	ifstream fsFile(SHADERS_DIR + string(fsPath));
 
 	stringstream vsStream;
 	stringstream fsStream;

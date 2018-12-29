@@ -107,6 +107,9 @@
     <ClCompile Include="Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Timer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Grid2D.h">
@@ -163,45 +166,48 @@
     <ClInclude Include="Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="singleColor.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="singleColor.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="singleColor_alpha.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="unlitColor.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="unlitColor.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="dirLightOnly.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="dirLightOnly.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="pointSpriteTest.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="pointSpriteTest.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="coloredParticle.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="coloredParticle.vert">
-      <Filter>Shaders</Filter>
-    </None>
+    <ClInclude Include="Timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="config.ini">
       <Filter>Resources</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\coloredParticle.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\coloredParticle.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\dirLightOnly.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\dirLightOnly.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\pointSpriteTest.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\pointSpriteTest.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\singleColor.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\singleColor.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\singleColor_alpha.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\unlitColor.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\unlitColor.vert">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

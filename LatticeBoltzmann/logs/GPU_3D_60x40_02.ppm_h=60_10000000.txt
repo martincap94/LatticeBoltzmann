@@ -1,0 +1,3 @@
+number of measurements for avg = 100
+30.5876
+28.0091

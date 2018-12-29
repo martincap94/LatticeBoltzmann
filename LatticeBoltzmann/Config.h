@@ -19,6 +19,9 @@
 
 #define TEXTURES_DIR "textures/"
 #define SCENES_DIR "scenes/"
+#define SHADERS_DIR "shaders/"
+#define LOG_FILENAME_BASE "logs/"
+
 //#define LBM_EXPERIMENTAL // experimental features
 
 

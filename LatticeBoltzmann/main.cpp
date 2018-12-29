@@ -8,17 +8,20 @@
 
 #include "Config.h"
 
-#define GLM_FORCE_CUDA // force GLM to be compatible with CUDA kernels
+//#define GLM_FORCE_CUDA // force GLM to be compatible with CUDA kernels
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "glm/gtx/string_cast.hpp"
+//#include "glm/gtx/string_cast.hpp"
 
 #include <random>
 #include <ctime>
 #include <fstream>
 #include <string>
 #include <algorithm>
+#include <chrono>
+#include <sstream>
 
 #include "LBM.h"
 #include "LBM2D_1D_indices.h"
@@ -35,8 +38,9 @@
 #include "DirectionalLight.h"
 #include "Grid.h"
 #include "Utils.h"
+#include "Timer.h"
 
-#include <omp.h>	// OpenMP for CPU parallelization
+//#include <omp.h>	// OpenMP for CPU parallelization
 
 //#include <vld.h>	// Visual Leak Detector for memory leaks analysis
 
@@ -85,7 +89,22 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 /// Load configuration file and parse all correct parameters.
 void loadConfigFile();
 
-/// Save configuration parameters to correct variables.
+/// Prints simple help message for command line usage.
+void printHelpMessage(string errorMsg = "");
+
+/// Parses input arguments of the application and saves them to global variables.
+/**
+	Parses input arguments of the application and saves them to global variables. Overwrites settings from config.ini if defined!
+	It is important to note that boolean options such as useCUDA ("-c") must be defined using true or false argument value since
+	we want to be able to rewrite the configuration values. This means that the approach of: if "-c" then use CUDA, if no argument
+	"-c" then do not is not possible. This approach would mean that if "-c" is defined, then we overwrite configuration parameter
+	and tell the simulator that we want to use CUDA, but if were to omit "-c" it would not set use CUDA to false, but it would use
+	the config.ini value which could be both true or false.
+
+*/
+void parseArguments(int argc, char **argv);
+
+/// Parses parameter and its value from the configuration file. Assumes correct format for each parameter.
 void saveConfigParam(string param, string val);
 
 /// Constructs the user interface for the given context. Must be called in each frame!
@@ -122,6 +141,7 @@ LBM *lbm;				///< Pointer to the current LBM
 Grid *grid;				///< Pointer to the current grid
 Camera *camera;			///< Pointer to the current camera
 ParticleSystem *particleSystem;		///< Pointer to the particle system that is to be used throughout the whole application
+Timer timer;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///// DEFAULT VALUES THAT ARE TO BE REWRITTEN FROM THE CONFIG FILE
@@ -132,8 +152,8 @@ string sceneFilename;		///< Filename of the scene
 bool useCUDA = true;		///< Whether to use CUDA or run the CPU version of the application
 int useCUDACheckbox = 1;	///< Helper int value for the UI checkbox
 
-float deltaTime = 0.0f;		///< Delta time of the current frame
-float lastFrameTime;		///< Duration of the last frame
+double deltaTime = 0.0;		///< Delta time of the current frame
+double lastFrameTime;		///< Duration of the last frame
 
 glm::mat4 view;				///< View matrix
 glm::mat4 projection;		///< Projection matrix
@@ -160,11 +180,23 @@ int blockDim_2D = 256;		///< Block dimension for 2D LBM
 int blockDim_3D_x = 32;		///< Block x dimension for 3D LBM
 int blockDim_3D_y = 2;		///< Block y dimension for 3D LBM
 
+bool measureTime = false;	///< Whether the time of simulation steps should be measured
+int avgFrameCount = 1000;	///< Number of frames for which we take time measurement average
+bool exitAfterFirstAvg = false;
+
+int prevPauseKeyState = GLFW_RELEASE;
+int pauseKey = GLFW_KEY_T;
+
+int prevResetKeyState = GLFW_RELEASE;
+int resetKey = GLFW_KEY_R;
 
 
 /// Main - runs the application and sets seed for the random number generator.
 int main(int argc, char **argv) {
 	srand(time(NULL));
+
+	loadConfigFile();
+	parseArguments(argc, argv); // they take precedence (overwrite) config file values
 
 	runApp();
 
@@ -193,8 +225,6 @@ int runApp() {
 		count++;
 	}
 	printf_s("Number of threads: %d\n", count);*/
-
-	loadConfigFile();
 
 	glfwInit();
 
@@ -356,13 +386,28 @@ int runApp() {
 	
 	float prevTime = glfwGetTime();
 	int totalFrameCounter = 0;
+	//int measurementFrameCounter = 0;
+	//double accumulatedTime = 0.0;
 
 	// Set these callbacks after nuklear initialization, otherwise they won't work!
 	glfwSetScrollCallback(window, scroll_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 
-	while (!glfwWindowShouldClose(window) && appRunning) {
+	stringstream ss;
+	ss << (useCUDA ? "GPU" : "CPU") << "_";
+	ss << ((lbmType == LBM2D) ? "2D" : "3D") << "_";
+	ss << sceneFilename;
+	if (lbmType == LBM3D) {
+		ss << "_h=" << latticeHeight;
+	}
+	ss << "_" << particleSystem->numParticles;
+	timer.configString = ss.str();
+	if (measureTime) {
+		timer.start();
+	}
+	double accumulatedTime = 0.0;
 
+	while (!glfwWindowShouldClose(window) && appRunning) {
 		// enable flags each frame because nuklear disables them when it is rendered	
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_LIGHTING);
@@ -374,25 +419,31 @@ int runApp() {
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		float currentFrameTime = glfwGetTime();
+		double currentFrameTime = glfwGetTime();
 		deltaTime = currentFrameTime - lastFrameTime;
 		lastFrameTime = currentFrameTime;
 		frameCounter++;
 		totalFrameCounter++;
+		accumulatedTime += deltaTime;
+
 		if (currentFrameTime - prevTime >= 1.0f) {
-			printf("Avg delta time = %0.4f [ms]\n", (1000.0f / frameCounter));
+			printf("Avg delta time = %0.4f [ms]\n", 1000.0 * (accumulatedTime / frameCounter));
 			prevTime += (currentFrameTime - prevTime);
 			frameCounter = 0;
+			accumulatedTime = 0.0;
 		}
 		//cout << " Delta time = " << (deltaTime * 1000.0f) << " [ms]" << endl;
 		//cout << " Framerate = " << (1.0f / deltaTime) << endl;
-
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glfwPollEvents();
 		processInput(window);
 		constructUserInterface(ctx, particlesColor);
+
+		if (measureTime) {
+			timer.clockAvgStart();
+		}
 
 		// MAIN SIMULATION STEP
 		if (!paused) {
@@ -403,6 +454,15 @@ int runApp() {
 			}
 		}
 
+		if (measureTime) {
+			if (useCUDA) {
+				cudaDeviceSynchronize();
+			}
+			if (timer.clockAvgEnd() && exitAfterFirstAvg) {
+				cout << "Exiting main loop..." << endl;
+				break;
+			}
+		}
 
 		// UPDATE SHADER VIEW MATRICES
 		view = camera->getViewMatrix();
@@ -430,7 +490,6 @@ int runApp() {
 		coloredParticleShader.setMat4fv("uView", view);
 
 
-
 		// DRAW SCENE
 		grid->draw(singleColorShader);
 		lbm->draw(singleColorShader);
@@ -450,6 +509,7 @@ int runApp() {
 		lbm->recalculateVariables(); // recalculate variables based on values set in the user interface
 
 		glfwSwapBuffers(window);
+
 
 	}
 
@@ -474,6 +534,10 @@ int runApp() {
 
 	nk_glfw3_shutdown();
 	glfwTerminate();
+
+	if (measureTime) {
+		timer.end();
+	}
 
 	return 0;
 
@@ -514,8 +578,21 @@ void processInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 		camera->setView(Camera::VIEW_TOP);
 	}
-	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-		lbm->resetSimulation();
+	if (glfwGetKey(window, resetKey) == GLFW_PRESS) {
+		if (prevResetKeyState == GLFW_RELEASE) {
+			lbm->resetSimulation();
+		}
+		prevResetKeyState = GLFW_PRESS;
+	} else {
+		prevResetKeyState = GLFW_RELEASE;
+	}
+	if (glfwGetKey(window, pauseKey) == GLFW_PRESS) {
+		if (prevPauseKeyState == GLFW_RELEASE) {
+			paused = !paused;
+		}
+		prevPauseKeyState = GLFW_PRESS;
+	} else {
+		prevPauseKeyState = GLFW_RELEASE;
 	}
 }
 
@@ -539,7 +616,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 		glm::vec4 mouseCoords(xpos, ypos, 0.0f, 1.0f);
 		mouseCoords = glm::inverse(view) * glm::inverse(projection) * mouseCoords;
-		cout << "mouse coords = " << glm::to_string(mouseCoords) << endl;
+		//cout << "mouse coords = " << glm::to_string(mouseCoords) << endl;
 	}
 }
 
@@ -581,19 +658,135 @@ void loadConfigFile() {
 	}
 }
 
+void printHelpMessage(string errorMsg) {
+
+	if (errorMsg == "") {
+		cout << "Lattice Boltzmann command line argument options:" << endl;
+	} else {
+		cout << "Incorrect usage of parameter: " << errorMsg << ". Please refer to the options below." << endl;
+	}
+	cout << " -h, -help, --help:" << endl << "  show this help message" << endl;
+	cout << " -t:" << endl << "  LBM type: 2D (or 2) and 3D (or 3)" << endl;
+	cout << " -s" << endl << "  scene filename: *.ppm" << endl;
+	cout << " -c:" << endl << "   use CUDA: 'true' or 'false'" << endl;
+	cout << " -lh: " << endl << "   lattice height (int value)" << endl;
+	cout << " -m: " << endl << "   measure times (true or false)" << endl;
+	cout << " -p: " << endl << "   number of particles (int value)" << endl;
+	cout << " -mavg: " << endl << "   number of measurements for average time" << endl;
+	cout << " -mexit: " << endl << "   exit after first average measurement finished (true or false)" << endl;
+	cout << " -autoplay, -auto, -a: " << endl << "   start simulation right away (true or false)" << endl;
+}
+
+void parseArguments(int argc, char **argv) {
+	if (argc <= 1) {
+		return;
+	}
+	cout << "Parsing command line arguments..." << endl;
+	string arg;
+	string val;
+	string vallw;
+	for (int i = 1; i < argc; i++) {
+		arg = (string)argv[i];
+		if (arg == "-h" || arg == "-help" || arg == "--help") {
+			printHelpMessage();
+		} else if (arg == "-t") {
+			if (i + 1 < argc) {
+				val = argv[i + 1];
+				if (val == "2D" || val == "2" || val == "3D" || val == "3") {
+					saveConfigParam(arg, val);
+				} else {
+					printHelpMessage("-t");
+				}
+				i++;
+			}
+		} else if (arg == "-s") {
+			if (i + 1 < argc) {
+				val = argv[i + 1];
+				saveConfigParam(arg, val);
+				i++;
+			}
+		} else if (arg == "-c") {
+			if (i + 1 < argc) {
+				val = argv[i + 1];
+				transform(val.begin(), val.end(), val.begin(), [](char c) { return tolower(c); });
+				if (val == "true" || val == "false") {
+					saveConfigParam(arg, val);
+				} else {
+					printHelpMessage("-c");
+				}
+				i++;
+			}
+		} else if (arg == "-m") {
+			if (i + 1 < argc) {
+				val = argv[i + 1];
+				transform(val.begin(), val.end(), val.begin(), [](char c) { return tolower(c); });
+				if (val == "true" || val == "false") {
+					saveConfigParam(arg, val);
+				} else {
+					printHelpMessage("-m");
+				}
+				i++;
+			}
+		} else if (arg == "-lh") {
+			if (i + 1 < argc) {
+				val = argv[i + 1];
+				saveConfigParam(arg, val);
+				i++;
+			}
+		} else if (arg == "-p") {
+			if (i + 1 < argc) {
+				val = argv[i + 1];
+				saveConfigParam(arg, val);
+				i++;
+			}
+		} else if (arg == "-mavg") {
+			if (i + 1 < argc) {
+				val = argv[i + 1];
+				saveConfigParam(arg, val);
+				i++;
+			}
+		} else if (arg == "-mexit") {
+			if (i + 1 < argc) {
+				val = argv[i + 1];
+				transform(val.begin(), val.end(), val.begin(), [](char c) { return tolower(c); });
+				if (val == "true" || val == "false") {
+					saveConfigParam(arg, val);
+				} else {
+					printHelpMessage("-mexit");
+				}
+				i++;
+			}
+		} else if (arg == "-autoplay" || arg == "-auto" || arg == "-a") {
+			if (i + 1 < argc) {
+				val = argv[i + 1];
+				transform(val.begin(), val.end(), val.begin(), [](char c) { return tolower(c); });
+				if (val == "true" || val == "false") {
+					saveConfigParam(arg, "autoplay");
+				} else {
+					printHelpMessage("-autoplay");
+				}
+				i++;
+			}
+		}
+
+	}
+
+
+}
+
 void saveConfigParam(string param, string val) {
 
-	if (param == "LBM_type") {
-		if (val == "2D") {
+	if (param == "LBM_type" || param == "-t") {
+		if (val == "2D" || val == "2") {
 			lbmType = LBM2D;
-		} else if (val == "3D") {
+		} else if (val == "3D" || val == "3") {
 			lbmType = LBM3D;
 		}
 	} else if (param == "VSync") {
 		vsync = stoi(val);
-	} else if (param == "num_particles") {
+	} else if (param == "num_particles" || param == "-p") {
 		numParticles = stoi(val);
-	} else if (param == "scene_filename") {
+	} else if (param == "scene_filename" || param == "-s") {
 		sceneFilename = val;
 	} else if (param == "window_width") {
 		windowWidth = stoi(val);
@@ -601,11 +794,11 @@ void saveConfigParam(string param, string val) {
 		windowHeight = stoi(val);
 	} else if (param == "lattice_width") {
 		latticeWidth = stoi(val);
-	} else if (param == "lattice_height") {
+	} else if (param == "lattice_height" || param == "-lh") {
 		latticeHeight = stoi(val);
 	} else if (param == "lattice_depth") {
 		latticeDepth = stoi(val);
-	} else if (param == "use_CUDA") {
+	} else if (param == "use_CUDA" || param == "-c") {
 		useCUDA = (val == "true") ? true : false;
 		useCUDACheckbox = (int)useCUDA;
 	} else if (param == "tau") {
@@ -622,9 +815,18 @@ void saveConfigParam(string param, string val) {
 		blockDim_3D_x = stoi(val);
 	} else if (param == "block_dim_3D_y") {
 		blockDim_3D_y = stoi(val);
+	} else if (param == "measure_time" || param == "-m") {
+		measureTime = (val == "true") ? true : false;
+	} else if (param == "avg_frame_count" || param == "-mavg") {
+		//avgFrameCount = stoi(val);
+		timer.numMeasurementsForAvg = stoi(val);
+	} else if (param == "log_measurements_to_file") {
+		timer.logToFile = (val == "true") ? true : false;
+	} else if (param == "print_measurements_to_console") {
+		timer.printToConsole = (val == "true") ? true : false;
+	} else if (param == "exit_after_first_avg" || param == "-mexit") {
+		exitAfterFirstAvg = (val == "true") ? true : false;
 	}
-
-
 }
 
 void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
