@@ -20,8 +20,8 @@ glm::mat4 Camera2D::getViewMatrix() {
 }
 
 
-void Camera2D::processKeyboardMovement(eCameraMovementDirection direction, float deltaTime) {
-	float velocity = movementSpeed * deltaTime;
+void Camera2D::processKeyboardMovement(eCameraMovementDirection direction, double deltaTime) {
+	float velocity = (float)((double)movementSpeed * deltaTime);
 
 	if (direction == FORWARD) {
 		position += front * velocity;
@@ -60,7 +60,7 @@ void Camera2D::processKeyboardMovement(eCameraMovementDirection direction, float
 }
 
 
-void Camera2D::processMouseScroll(float yoffset) {
+void Camera2D::processMouseScroll(double yoffset) {
 	/*if (Zoom >= 1.0f && Zoom <= 45.0f) {
 		Zoom -= yoffset;
 	}

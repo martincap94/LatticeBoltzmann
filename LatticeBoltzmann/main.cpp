@@ -203,7 +203,7 @@ int resetKey = GLFW_KEY_R;
 
 /// Main - runs the application and sets seed for the random number generator.
 int main(int argc, char **argv) {
-	srand(time(NULL));
+	srand(time((time_t)NULL));
 
 	loadConfigFile();
 	parseArguments(argc, argv); // they take precedence (overwrite) config file values
@@ -266,8 +266,6 @@ int runApp() {
 	glViewport(0, 0, screenWidth, screenHeight);
 
 
-	float aspectRatio = screenWidth / screenHeight;
-
 	struct nk_context *ctx = nk_glfw3_init(window, NK_GLFW3_INSTALL_CALLBACKS);
 
 	{
@@ -292,7 +290,7 @@ int runApp() {
 	particlesColor.b = particleSystem->particlesColor.b;
 
 
-	glm::vec3 latticeDim(latticeWidth, latticeHeight, latticeDepth);
+	glm::ivec3 latticeDim(latticeWidth, latticeHeight, latticeDepth);
 
 	float ratio = (float)screenWidth / (float)screenHeight;
 
@@ -307,10 +305,10 @@ int runApp() {
 			latticeDepth = 1;
 
 			if (latticeWidth >= latticeHeight) {
-				projWidth = latticeWidth;
+				projWidth = (float)latticeWidth;
 				projHeight = projWidth / ratio;
 			} else {
-				projHeight = latticeHeight;
+				projHeight = (float)latticeHeight;
 				projWidth = projHeight * ratio;
 			}
 
@@ -337,7 +335,7 @@ int runApp() {
 
 
 
-			projectionRange = (latticeWidth > latticeHeight) ? latticeWidth : latticeHeight;
+			projectionRange = (float)((latticeWidth > latticeHeight) ? latticeWidth : latticeHeight);
 			projectionRange = (projectionRange > latticeDepth) ? projectionRange : latticeDepth;
 			projectionRange /= 2.0f;
 
@@ -347,7 +345,7 @@ int runApp() {
 			//projection = glm::ortho(-projectionRange, projectionRange, -projectionRange, projectionRange, nearPlane, farPlane);
 			projection = glm::ortho(-projWidth, projWidth, -projHeight, projHeight, nearPlane, farPlane);
 			grid = new Grid3D(latticeWidth, latticeHeight, latticeDepth, 6, 6, 6);
-			float cameraRadius = sqrtf(latticeWidth * latticeWidth + latticeDepth * latticeDepth) + 10.0f;
+			float cameraRadius = sqrtf((float)(latticeWidth * latticeWidth + latticeDepth * latticeDepth)) + 10.0f;
 			camera = new OrbitCamera(glm::vec3(0.0f, 0.0f, 0.0f), WORLD_UP, 45.0f, 80.0f, glm::vec3(latticeWidth / 2.0f, latticeHeight / 2.0f, latticeDepth / 2.0f), cameraRadius);
 
 			break;
@@ -408,7 +406,7 @@ int runApp() {
 	int frameCounter = 0;
 	glfwSwapInterval(vsync); // VSync Settings (0 is off, 1 is 60FPS, 2 is 30FPS and so on)
 	
-	float prevTime = glfwGetTime();
+	double prevTime = glfwGetTime();
 	int totalFrameCounter = 0;
 	//int measurementFrameCounter = 0;
 	//double accumulatedTime = 0.0;
@@ -670,14 +668,14 @@ void loadConfigFile() {
 			continue;
 		}
 		// get rid of comments at the end of the line
-		int idx = line.find("//");
+		int idx = (int)line.find("//");
 		line = line.substr(0, idx);
 
 		// delete whitespace
 		trim(line);
 		//line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
 
-		idx = line.find(":");
+		idx = (int)line.find(":");
 
 		string param = line.substr(0, idx);
 		string val = line.substr(idx + 1, line.length() - 1);
@@ -871,8 +869,8 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 				 NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
 				 NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
 		enum { EASY, HARD };
-		static int op = EASY;
-		static int property = 20;
+		//static int op = EASY;
+		//static int property = 20;
 		nk_layout_row_static(ctx, 30, 80, 3);
 		if (nk_button_label(ctx, "Reset")) {
 			//fprintf(stdout, "button pressed\n");
@@ -954,7 +952,7 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 
 		nk_layout_row_dynamic(ctx, 10, 1);
 		nk_labelf(ctx, NK_TEXT_LEFT, "Point size");
-		nk_slider_int(ctx, 1, &particleSystem->pointSize, 100, 1);
+		nk_slider_float(ctx, 1.0f, &particleSystem->pointSize, 100.0f, 0.5f);
 
 		if (!usePointSprites && !lbm->visualizeVelocity) {
 			nk_layout_row_dynamic(ctx, 20, 1);
@@ -990,10 +988,10 @@ void window_size_callback(GLFWwindow* window, int width, int height) {
 
 	if (lbmType == LBM2D) {
 		if (latticeWidth >= latticeHeight) {
-			projWidth = latticeWidth;
+			projWidth = (float)latticeWidth;
 			projHeight = projWidth / ratio;
 		} else {
-			projHeight = latticeHeight;
+			projHeight = (float)latticeHeight;
 			projWidth = projHeight * ratio;
 		}
 		projection = glm::ortho(-1.0f, projWidth, -1.0f, projHeight, nearPlane, farPlane);

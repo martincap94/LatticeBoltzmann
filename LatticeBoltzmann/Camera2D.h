@@ -41,8 +41,8 @@ public:
 	// note: doxygen descriptions should be inherited from base class
 
 	virtual glm::mat4 getViewMatrix();
-	virtual void processKeyboardMovement(eCameraMovementDirection direction, float deltaTime);
-	virtual void processMouseScroll(float yoffset);
+	virtual void processKeyboardMovement(eCameraMovementDirection direction, double deltaTime);
+	virtual void processMouseScroll(double yoffset);
 	virtual void printInfo();
 
 private:

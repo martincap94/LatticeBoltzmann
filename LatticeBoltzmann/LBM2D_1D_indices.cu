@@ -44,7 +44,7 @@ __device__ __host__ glm::vec3 mapToColor(float val) {
 	return glm::rgbColor((1.0f - val) *  glm::hsvColor(glm::vec3(1.0f, 0.0f, 0.0f)) + val * glm::hsvColor(glm::vec3(0.0f, 1.0f, 0.0f)));
 }
 
-__device__ __host__ glm::vec3 mapToViridis2D(float val) {
+__device__ glm::vec3 mapToViridis2D(float val) {
 	val = glm::clamp(val, 0.0f, 1.0f);
 	int discreteVal = (int)(val * 255.0f);
 	return glm::vec3(viridis_cm[discreteVal][0], viridis_cm[discreteVal][1], viridis_cm[discreteVal][2]);
@@ -458,7 +458,7 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 LBM2D_1D_indices::LBM2D_1D_indices() {
 }
 
-LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads) : LBM(dim, sceneFilename, tau, particleSystem), numThreads(numThreads) {
+LBM2D_1D_indices::LBM2D_1D_indices(glm::ivec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads) : LBM(dim, sceneFilename, tau, particleSystem), numThreads(numThreads) {
 	
 
 	initScene();
@@ -493,7 +493,7 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 	cudaMemcpy(d_velocities, velocities, sizeof(glm::vec2) * latticeSize, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_frontLattice, frontLattice, sizeof(Node) * latticeSize, cudaMemcpyHostToDevice);
 
-	numBlocks = ceil(latticeSize / this->numThreads) + 1;
+	numBlocks = (int)ceil(latticeSize / this->numThreads) + 1;
 
 
 }
@@ -1057,13 +1057,13 @@ void LBM2D_1D_indices::moveParticles() {
 				if (mirrorSides) {
 					if (particleVertices[i].x <= 0.0f || particleVertices[i].x >= latticeWidth - 1) {
 						particleVertices[i].x = 0.0f;
-						particleVertices[i].y = rand2D(i, y) * (latticeHeight - 1);
+						particleVertices[i].y = rand2D(i, (int)y) * (latticeHeight - 1);
 					} else {
 						particleVertices[i].y = (float)((int)(particleVertices[i].y + latticeHeight - 1) % (latticeHeight - 1));
 					}
 				} else {
 					particleVertices[i].x = 0.0f;
-					particleVertices[i].y = rand2D(i, y) * (latticeHeight - 1);
+					particleVertices[i].y = rand2D(i, (int)y) * (latticeHeight - 1);
 				}
 				particleVertices[i].z = 0.0f;
 			}
@@ -1319,7 +1319,7 @@ void LBM2D_1D_indices::precomputeRespawnRange() {
 		}
 		if (minSet && tCol->area[latticeWidth * y]) {
 			respawnMaxY = y - 1;
-			maxSet;
+			maxSet = true;
 			break;
 		}
 	}

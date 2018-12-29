@@ -21,8 +21,8 @@ glm::mat4 OrbitCamera::getViewMatrix() {
 }
 
 
-void OrbitCamera::processKeyboardMovement(eCameraMovementDirection direction, float deltaTime) {
-	float velocity = movementSpeed * deltaTime;
+void OrbitCamera::processKeyboardMovement(eCameraMovementDirection direction, double deltaTime) {
+	float velocity = (float)((double)movementSpeed * deltaTime);
 
 	if (direction == FORWARD) {
 		position += front * velocity;
@@ -64,7 +64,7 @@ void OrbitCamera::processKeyboardMovement(eCameraMovementDirection direction, fl
 	}
 }
 
-void OrbitCamera::processMouseScroll(float yoffset) {
+void OrbitCamera::processMouseScroll(double yoffset) {
 	//this->radius += yoffset;
 	//updateCameraVectors();
 }

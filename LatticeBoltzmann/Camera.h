@@ -85,10 +85,10 @@ public:
 		\param[in] direction		eCameraMovementDirection value that describes the direction of the movement.
 		\param[in] deltaTime		Delta time of the rendered frame for frame dependent movement (and possible smoothing).
 	*/
-	virtual void processKeyboardMovement(eCameraMovementDirection direction, float deltaTime) = 0;
+	virtual void processKeyboardMovement(eCameraMovementDirection direction, double deltaTime) = 0;
 
 	/// Process mouse scroll - unused at the moment!
-	virtual void processMouseScroll(float yoffset) = 0;
+	virtual void processMouseScroll(double yoffset) = 0;
 
 	/// Sets the view of the camera (based on the eCameraView enum).
 	/**

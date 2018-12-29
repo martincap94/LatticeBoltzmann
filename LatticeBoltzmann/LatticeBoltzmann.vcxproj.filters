@@ -36,6 +36,7 @@
     <CudaCompile Include="CUDAUtils.cuh">
       <Filter>Header Files</Filter>
     </CudaCompile>
+    <CudaCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="glad.c">
@@ -51,9 +52,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LatticeCollider.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="OrbitCamera.cpp">

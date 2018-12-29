@@ -37,7 +37,7 @@ __device__ __host__ float rand(int x, int y) {
 }
 
 
-__device__ __host__ glm::vec3 mapToViridis3D(float val) {
+__device__ glm::vec3 mapToViridis3D(float val) {
 	val = glm::clamp(val, 0.0f, 1.0f);
 	int discreteVal = (int)(val * 255.0f);
 	return glm::vec3(viridis_cm[discreteVal][0], viridis_cm[discreteVal][1], viridis_cm[discreteVal][2]);
@@ -1046,7 +1046,7 @@ LBM3D_1D_indices::LBM3D_1D_indices() {
 
 
 
-LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, dim3 blockDim)
+LBM3D_1D_indices::LBM3D_1D_indices(glm::ivec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, dim3 blockDim)
 	: LBM(dim, sceneFilename, tau, particleSystem), blockDim(blockDim) {
 
 	initScene();
@@ -1084,7 +1084,7 @@ LBM3D_1D_indices::LBM3D_1D_indices(glm::vec3 dim, string sceneFilename, float ta
 	cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
 
 
-	gridDim = dim3(ceil(latticeSize / (blockDim.x * blockDim.y * blockDim.z)) + 1, 1, 1);
+	gridDim = dim3((unsigned int)ceil(latticeSize / (blockDim.x * blockDim.y * blockDim.z)) + 1, 1, 1);
 	cacheSize = blockDim.x * blockDim.y * blockDim.z * sizeof(Node3D);
 
 
@@ -1646,8 +1646,8 @@ void LBM3D_1D_indices::moveParticles() {
 				particleVertices[i].z <= 0.0f || particleVertices[i].z >= latticeDepth - 1) {
 
 				particleVertices[i].x = 0.0f;
-				particleVertices[i].y = rand(i, y) * (latticeHeight - 1);
-				particleVertices[i].z = rand(i, z) * (latticeDepth - 1);
+				particleVertices[i].y = rand(i, (int)y) * (latticeHeight - 1);
+				particleVertices[i].z = rand(i, (int)z) * (latticeDepth - 1);
 				//particleVertices[i].y = std::rand() % (latticeHeight - 1);
 				//particleVertices[i].z = std::rand() % (latticeDepth - 1);
 

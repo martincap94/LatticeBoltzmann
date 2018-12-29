@@ -64,7 +64,7 @@ public:
 		\param[in] tau				Initial value of tau.
 		\param[in] particleSystem	Particle system that will be used.
 	*/
-	LBM(glm::vec3 dimensions, string sceneFilename, float tau, ParticleSystem *particleSystem);
+	LBM(glm::ivec3 dimensions, string sceneFilename, float tau, ParticleSystem *particleSystem);
 
 	/// Default virtual destructor.
 	virtual ~LBM();

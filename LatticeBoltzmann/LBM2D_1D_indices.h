@@ -120,7 +120,7 @@ public:
 		\param[in] particleSystem	Pointer to the particle system.
 		\param[in] numThreads		Number of threads per block to be used when launching CUDA kernels.
 	*/
-	LBM2D_1D_indices(glm::vec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads);
+	LBM2D_1D_indices(glm::ivec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads);
 
 	/// Frees CPU and GPU memory and unmaps CUDA graphics resources (VBOs).
 	virtual ~LBM2D_1D_indices();
