@@ -707,6 +707,7 @@ void printHelpMessage(string errorMsg) {
 	cout << " -mavg: " << endl << "   number of measurements for average time" << endl;
 	cout << " -mexit: " << endl << "   exit after first average measurement finished (true or false)" << endl;
 	cout << " -autoplay, -auto, -a: " << endl << "   start simulation right away (true or false)" << endl;
+	cout << " -tau:" << endl << "   value of tau (float between 0.51 and 10.0)" << endl;
 }
 
 void parseArguments(int argc, char **argv) {
