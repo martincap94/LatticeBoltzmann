@@ -203,7 +203,7 @@ int resetKey = GLFW_KEY_R;				///< Reset key
 
 /// Main - runs the application and sets seed for the random number generator.
 int main(int argc, char **argv) {
-	srand(time((time_t)NULL));
+	srand(time(NULL));
 
 	loadConfigFile();
 	parseArguments(argc, argv); // they take precedence (overwrite) config file values
@@ -799,6 +799,12 @@ void parseArguments(int argc, char **argv) {
 				}
 				i++;
 			}
+		} else if (arg == "-tau") {
+			if (i + 1 < argc) {
+				val = argv[i + 1];
+				saveConfigParam(arg, val);
+				i++;
+			}
 		}
 
 	}
@@ -833,7 +839,7 @@ void saveConfigParam(string param, string val) {
 	} else if (param == "use_CUDA" || param == "-c") {
 		useCUDA = (val == "true") ? true : false;
 		useCUDACheckbox = (int)useCUDA;
-	} else if (param == "tau") {
+	} else if (param == "tau" || param == "-tau") {
 		tau = stof(val);
 	} else if (param == "draw_streamlines") {
 		drawStreamlines = (val == "true") ? true : false;
