@@ -26,7 +26,9 @@ public:
 
 	/// Enumeration that should contain all controllable properties of the simulation (through UI).
 	enum eLBMControlProperty {
-		MIRROR_SIDES_PROP
+		MIRROR_SIDES_PROP,
+		TEST_VAL_PROP,
+		TEST_INT_PROP
 	};
 
 	ParticleSystem *particleSystem;		///< Pointer to the particle system
@@ -43,6 +45,9 @@ public:
 	float tau = 0.52f;		///< Tau parameter of the simulation, describes the viscosity of the simulated fluid
 	float itau;				///< Inverse value of tau = 1.0 / tau; it is used in the collision step, if tau is changed, this value must be recomputed
 	float nu;				///< Experimental value for subgrid model simulation
+
+	float testVal = 1.0f;
+	int testInt = 0;
 
 	glm::vec3 inletVelocity = glm::vec3(1.0f, 0.0f, 0.0f);		///< Inlet velocity vector
 

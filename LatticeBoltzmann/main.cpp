@@ -981,7 +981,17 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 		nk_label(ctx, "Camera movement speed", NK_TEXT_LEFT);
 		nk_slider_float(ctx, 1.0f, &camera->movementSpeed, 400.0f, 1.0f);
 
+		float prevTestVal = lbm->testVal;
+		nk_property_float(ctx, "Test Val", 0.1f, &lbm->testVal, 10.0f, 0.1f, 0.1f);
+		if (prevTestVal != lbm->testVal) {
+			lbm->updateControlProperty(LBM::TEST_VAL_PROP);
+		}
 
+		int prevTestInt = lbm->testInt;
+		nk_property_int(ctx, "Test Int", 0, &lbm->testInt, 100, 1, 1);
+		if (prevTestInt != lbm->testInt) {
+			lbm->updateControlProperty(LBM::TEST_INT_PROP);
+		}
 	}
 	nk_end(ctx);
 

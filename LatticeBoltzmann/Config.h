@@ -34,15 +34,18 @@
 #define MAX_STREAMLINE_LENGTH 200		///< Maximum streamline length
 
 
-#define LAT_SPEED 1.0f					///< Lattice speed (experimental)
-#define LAT_SPEED_SQ (LAT_SPEED * LAT_SPEED)	///< Square root of lattice speed (experimental)
-
-
 #define DEFAULT_CAMERA_SPEED 60.0f		///< Default camera movement speed
 
 
 //#define SUBGRID_EXPERIMENTAL
 #define SMAG_C 0.3f						///< Smagorinsky constant (experimental)
+
+#define C_S 30.0f
+
+//#define LAT_SPEED (C_S * sqrt(3.0f))
+#define LAT_SPEED 1.0f					///< Lattice speed (experimental)
+#define LAT_SPEED_SQ (LAT_SPEED * LAT_SPEED)	///< Square root of lattice speed (experimental)
+
 
 
 using namespace std;

@@ -23,6 +23,9 @@ __constant__ int d_mirrorSides;			///< Whether to mirror sides (cycle) on the de
 __device__ int d_respawnY = 0;			///< Respawn y coordinate on the device, not used (random respawn now used)
 __device__ int d_respawnZ = 0;			///< Respawn z coordinate on the device, not used (random respawn now used)
 
+__constant__ float d_testVal;
+__constant__ int d_testInt;
+
 
 /// Returns the flattened index using the device constants and provided coordinates.
 __device__ int getIdxKer(int x, int y, int z) {
@@ -392,13 +395,13 @@ __global__ void updateInletsKernel(Node3D *backLattice, glm::vec3 *velocities, g
 		backLattice[idx].adj[DIR_BOTTOM_LEFT_EDGE] = bottomLeftEq;
 
 
-		for (int i = 0; i < 19; i++) {
+		/*for (int i = 0; i < 19; i++) {
 			if (backLattice[idx].adj[i] < 0.0f) {
 				backLattice[idx].adj[i] = 0.0f;
 			} else if (backLattice[idx].adj[i] > 1.0f) {
 				backLattice[idx].adj[i] = 1.0f;
 			}
-		}
+		}*/
 	}
 }
 
@@ -583,13 +586,13 @@ __global__ void collisionStepKernel(Node3D *backLattice, glm::vec3 *velocities) 
 		backLattice[idx].adj[DIR_BOTTOM_LEFT_EDGE] -= d_itau * (backLattice[idx].adj[DIR_BOTTOM_LEFT_EDGE] - bottomLeftEq);
 
 
-		for (int i = 0; i < 19; i++) {
+		/*for (int i = 0; i < 19; i++) {
 			if (backLattice[idx].adj[i] < 0.0f) {
 				backLattice[idx].adj[i] = 0.0f;
 			} else if (backLattice[idx].adj[i] > 1.0f) {
 				backLattice[idx].adj[i] = 1.0f;
 			}
-		}
+		}*/
 	}
 
 
@@ -780,13 +783,13 @@ __global__ void collisionStepKernelShared(Node3D *backLattice, glm::vec3 *veloci
 		cache[cacheIdx].adj[DIR_BOTTOM_LEFT_EDGE] -= d_itau * (cache[cacheIdx].adj[DIR_BOTTOM_LEFT_EDGE] - bottomLeftEq);
 
 
-		for (int i = 0; i < 19; i++) {
-			if (cache[cacheIdx].adj[i] < 0.0f) {
-				cache[cacheIdx].adj[i] = 0.0f;
-			} else if (cache[cacheIdx].adj[i] > 1.0f) {
-				cache[cacheIdx].adj[i] = 1.0f;
-			}
-		}
+		//for (int i = 0; i < 19; i++) {
+		//	if (cache[cacheIdx].adj[i] < 0.0f) {
+		//		cache[cacheIdx].adj[i] = 0.0f;
+		//	} else if (cache[cacheIdx].adj[i] > 1.0f) {
+		//		cache[cacheIdx].adj[i] = 1.0f;
+		//	}
+		//}
 
 		backLattice[idx] = cache[cacheIdx];
 
@@ -1135,6 +1138,9 @@ LBM3D_1D_indices::LBM3D_1D_indices(glm::ivec3 dim, string sceneFilename, float t
 	cudaMemcpyToSymbol(d_tau, &tau, sizeof(float));
 	cudaMemcpyToSymbol(d_itau, &itau, sizeof(float));
 	cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
+	cudaMemcpyToSymbol(d_testVal, &testVal, sizeof(float));
+	cudaMemcpyToSymbol(d_testInt, &testInt, sizeof(int));
+
 
 
 	gridDim = dim3((unsigned int)ceil(latticeSize / (blockDim.x * blockDim.y * blockDim.z)) + 1, 1, 1);
@@ -1966,6 +1972,12 @@ void LBM3D_1D_indices::updateControlProperty(eLBMControlProperty controlProperty
 	switch (controlProperty) {
 		case MIRROR_SIDES_PROP:
 			cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
+			break;
+		case TEST_VAL_PROP:
+			cudaMemcpyToSymbol(d_testVal, &testVal, sizeof(float));
+			break;
+		case TEST_INT_PROP:
+			cudaMemcpyToSymbol(d_testInt, &testInt, sizeof(int));
 			break;
 	}
 }

@@ -25,6 +25,9 @@ __constant__ int d_respawnMaxY;			///< Maximum y respawn coordinate, not used
 
 __constant__ glm::vec3 d_directionVectors[NUM_2D_DIRECTIONS];	///< Constant array of direction vectors
 
+__constant__ float d_testVal; 
+__constant__ int d_testInt;
+
 
 /// Returns uniform random between 0.0 and 1.0. Provided from different student's work.
 __device__ __host__ float rand2D(int x, int y) {
@@ -315,13 +318,13 @@ __global__ void updateInletsKernel(Node *lattice, glm::vec3 inletVelocity) {
 		lattice[idx].adj[DIR_TOP_LEFT] = topLeftEq;
 		lattice[idx].adj[DIR_BOTTOM_LEFT] = bottomLeftEq;
 		lattice[idx].adj[DIR_BOTTOM_RIGHT] = bottomRightEq;
-		for (int i = 0; i < 9; i++) {
+		/*for (int i = 0; i < 9; i++) {
 			if (lattice[idx].adj[i] < 0.0f) {
 				lattice[idx].adj[i] = 0.0f;
 			} else if (lattice[idx].adj[i] > 1.0f) {
 				lattice[idx].adj[i] = 1.0f;
 			}
-		}
+		}*/
 	}
 
 }
@@ -491,6 +494,136 @@ __global__ void collisionStepKernel(Node *backLattice, glm::vec2 *velocities) {
 }
 
 
+/// Kernel for calculating the collision operator.
+/**
+Kernel that calculates the collision operator using Bhatnagar-Gross-Krook operator.
+Uses shared memory for speedup.
+\param[in] backLattice		Back lattice in which we do our calculations.
+\param[in] velocities		Velocities array for the lattice.
+*/
+__global__ void collisionStepKernel_Wood(Node *backLattice, glm::vec2 *velocities) {
+	float weightMiddle = 4.0f / 9.0f;
+	float weightAxis = 1.0f / 9.0f;
+	float weightDiagonal = 1.0f / 36.0f;
+
+
+	int idx = threadIdx.x + blockDim.x * blockIdx.x; // 1D array kernel
+	int cacheIdx = threadIdx.x;
+
+	extern __shared__ Node cache[];
+
+
+	if (idx < d_latticeSize) {
+
+		cache[cacheIdx] = backLattice[idx];
+
+
+		float macroDensity = 0.0f;
+		for (int i = 0; i < 9; i++) {
+			macroDensity += cache[cacheIdx].adj[i];
+		}
+
+		glm::vec3 macroVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
+
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_RIGHT] * cache[cacheIdx].adj[DIR_RIGHT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_TOP] * cache[cacheIdx].adj[DIR_TOP];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_LEFT] * cache[cacheIdx].adj[DIR_LEFT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_BOTTOM] * cache[cacheIdx].adj[DIR_BOTTOM];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_TOP_RIGHT] * cache[cacheIdx].adj[DIR_TOP_RIGHT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_TOP_LEFT] * cache[cacheIdx].adj[DIR_TOP_LEFT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_BOTTOM_LEFT] * cache[cacheIdx].adj[DIR_BOTTOM_LEFT];
+		macroVelocity += LAT_SPEED * d_directionVectors[DIR_BOTTOM_RIGHT] * cache[cacheIdx].adj[DIR_BOTTOM_RIGHT];
+		macroVelocity /= macroDensity;
+
+
+		//velocities[idx] = glm::vec2(macroVelocity.x, macroVelocity.y);
+		velocities[idx].x = macroVelocity.x;
+		velocities[idx].y = macroVelocity.y;
+
+
+		// let's find the equilibrium
+		float leftTermMiddle = weightMiddle * macroDensity;
+		float leftTermAxis = weightAxis * macroDensity;
+		float leftTermDiagonal = weightDiagonal * macroDensity;
+
+		// optimize these operations later
+
+		float thirdTerm = 1.5f * glm::dot(macroVelocity, macroVelocity) / LAT_SPEED_SQ;
+
+		float middleEq = leftTermMiddle + leftTermMiddle * (-thirdTerm);
+
+		// this can all be rewritten into arrays + for cycles!
+		float dotProd = glm::dot(d_directionVectors[DIR_RIGHT], macroVelocity);
+		float firstTerm = 3.0f * dotProd / LAT_SPEED;
+		float secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
+		float rightEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
+
+		dotProd = glm::dot(d_directionVectors[DIR_TOP], macroVelocity);
+		firstTerm = 3.0f * dotProd / LAT_SPEED;
+		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
+		float topEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
+
+		dotProd = glm::dot(d_directionVectors[DIR_LEFT], macroVelocity);
+		firstTerm = 3.0f * dotProd / LAT_SPEED;
+		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
+		float leftEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
+
+
+		dotProd = glm::dot(d_directionVectors[DIR_BOTTOM], macroVelocity);
+		firstTerm = 3.0f * dotProd / LAT_SPEED;
+		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
+		float bottomEq = leftTermAxis + leftTermAxis * (firstTerm + secondTerm - thirdTerm);
+
+
+		dotProd = glm::dot(d_directionVectors[DIR_TOP_RIGHT], macroVelocity);
+		firstTerm = 3.0f * dotProd / LAT_SPEED;
+		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
+		float topRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
+
+
+		dotProd = glm::dot(d_directionVectors[DIR_TOP_LEFT], macroVelocity);
+		firstTerm = 3.0f * dotProd / LAT_SPEED;
+		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
+		float topLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
+
+
+		dotProd = glm::dot(d_directionVectors[DIR_BOTTOM_LEFT], macroVelocity);
+		firstTerm = 3.0f * dotProd / LAT_SPEED;
+		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
+		float bottomLeftEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
+
+
+		dotProd = glm::dot(d_directionVectors[DIR_BOTTOM_RIGHT], macroVelocity);
+		firstTerm = 3.0f * dotProd / LAT_SPEED;
+		secondTerm = 4.5f * dotProd * dotProd / LAT_SPEED_SQ;
+		float bottomRightEq = leftTermDiagonal + leftTermDiagonal * (firstTerm + secondTerm - thirdTerm);
+
+		cache[cacheIdx].adj[DIR_MIDDLE] -= d_itau * (cache[cacheIdx].adj[DIR_MIDDLE] - middleEq);
+		cache[cacheIdx].adj[DIR_RIGHT] -= d_itau * (cache[cacheIdx].adj[DIR_RIGHT] - rightEq);
+		cache[cacheIdx].adj[DIR_TOP] -= d_itau * (cache[cacheIdx].adj[DIR_TOP] - topEq);
+		cache[cacheIdx].adj[DIR_LEFT] -= d_itau * (cache[cacheIdx].adj[DIR_LEFT] - leftEq);
+		cache[cacheIdx].adj[DIR_BOTTOM] -= d_itau * (cache[cacheIdx].adj[DIR_BOTTOM] - bottomEq);
+		cache[cacheIdx].adj[DIR_TOP_RIGHT] -= d_itau * (cache[cacheIdx].adj[DIR_TOP_RIGHT] - topRightEq);
+		cache[cacheIdx].adj[DIR_TOP_LEFT] -= d_itau * (cache[cacheIdx].adj[DIR_TOP_LEFT] - topLeftEq);
+		cache[cacheIdx].adj[DIR_BOTTOM_LEFT] -= d_itau * (cache[cacheIdx].adj[DIR_BOTTOM_LEFT] - bottomLeftEq);
+		cache[cacheIdx].adj[DIR_BOTTOM_RIGHT] -= d_itau * (cache[cacheIdx].adj[DIR_BOTTOM_RIGHT] - bottomRightEq);
+
+
+		//for (int i = 0; i < 9; i++) {
+		//	if (cache[cacheIdx].adj[i] < 0.0f) {
+		//		cache[cacheIdx].adj[i] = 0.0f;
+		//	} else if (cache[cacheIdx].adj[i] > 1.0f) {
+		//		cache[cacheIdx].adj[i] = 1.0f;
+		//	}
+		//}
+
+		backLattice[idx] = cache[cacheIdx];
+
+	}
+}
+
+
+
 
 
 
@@ -519,6 +652,8 @@ LBM2D_1D_indices::LBM2D_1D_indices(glm::ivec3 dim, string sceneFilename, float t
 	cudaMemcpyToSymbol(d_itau, &itau, sizeof(float));
 	cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
 	cudaMemcpyToSymbol(d_directionVectors, &directionVectors, sizeof(glm::vec3) * NUM_2D_DIRECTIONS);
+	cudaMemcpyToSymbol(d_testVal, &testVal, sizeof(float));
+	cudaMemcpyToSymbol(d_testInt, &testInt, sizeof(int));
 
 
 	cudaGraphicsGLRegisterBuffer(&cudaParticleVerticesVBO, particleSystem->vbo, cudaGraphicsMapFlagsWriteDiscard);
@@ -560,6 +695,12 @@ void LBM2D_1D_indices::updateControlProperty(eLBMControlProperty controlProperty
 	switch (controlProperty) {
 		case MIRROR_SIDES_PROP:
 			cudaMemcpyToSymbol(d_mirrorSides, &mirrorSides, sizeof(int));
+			break;
+		case TEST_VAL_PROP:
+			cudaMemcpyToSymbol(d_testVal, &testVal, sizeof(float));
+			break;
+		case TEST_INT_PROP:
+			cudaMemcpyToSymbol(d_testInt, &testInt, sizeof(int));
 			break;
 	}
 
@@ -695,7 +836,8 @@ void LBM2D_1D_indices::doStepCUDA() {
 	updateCollidersKernel << <numBlocks, numThreads >> > (d_backLattice, d_tCol);
 
 	// ============================================= collision step CUDA
-	collisionStepKernel << <numBlocks, numThreads, numThreads * sizeof(Node) >> > (d_backLattice, d_velocities);
+	//collisionStepKernel << <numBlocks, numThreads, numThreads * sizeof(Node) >> > (d_backLattice, d_velocities);
+	collisionStepKernel_Wood << <numBlocks, numThreads, numThreads * sizeof(Node) >> > (d_backLattice, d_velocities);
 
 	// ============================================= move particles CUDA - different respawn from CPU !!!
 
