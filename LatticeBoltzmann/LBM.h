@@ -58,6 +58,12 @@ public:
 	
 	string sceneFilename;		///< Filename of the scene that is used for the simulation
 
+
+	int streamingStepMode = 0;
+	int updateCollidersMode = 0;
+
+
+
 	/// Default constructor.
 	LBM();
 
@@ -88,6 +94,7 @@ public:
 			clearBackLattice, updateInlets, streamingStep, updateColliders, collisionStep, moveParticles, swap
 	*/
 	virtual void doStep() = 0;
+	virtual void doStepNew() {}
 
 	/// Does one step of the simulation using GPU device with CUDA capability.
 	/**

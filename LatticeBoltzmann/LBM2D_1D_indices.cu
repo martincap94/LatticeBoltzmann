@@ -10,6 +10,8 @@
 
 #include <omp.h>
 
+#include <cmath>
+
 
 __constant__ int d_latticeWidth;		///< Lattice width constant on the device
 __constant__ int d_latticeHeight;		///< Lattice height constant on the device
@@ -25,7 +27,7 @@ __constant__ int d_respawnMaxY;			///< Maximum y respawn coordinate, not used
 
 __constant__ glm::vec3 d_directionVectors[NUM_2D_DIRECTIONS];	///< Constant array of direction vectors
 
-__constant__ float d_testVal; 
+__constant__ float d_testVal;
 __constant__ int d_testInt;
 
 
@@ -49,6 +51,85 @@ __device__ glm::vec3 mapToViridis2D(float val) {
 	int discreteVal = (int)(val * 255.0f);
 	return glm::vec3(viridis_cm[discreteVal][0], viridis_cm[discreteVal][1], viridis_cm[discreteVal][2]);
 }
+//
+//__global__ void moveParticlesKernelInteropNew(glm::vec3 *particleVertices, glm::vec2 *velocities, int *numParticles, glm::vec3 *particleColors) {
+//
+//
+//	glm::vec2 adjVelocities[4];
+//	int idx = threadIdx.x + blockDim.x * blockIdx.x;
+//
+//	while (idx < *numParticles) {
+//		float x = particleVertices[idx].x;
+//		float y = particleVertices[idx].y;
+//
+//
+//		int leftX = (int)x;
+//		int rightX = leftX + 1;
+//		int bottomY = (int)y;
+//		int topY = bottomY + 1;
+//
+//		adjVelocities[0] = velocities[getIdxKernel(leftX, topY)];
+//		adjVelocities[1] = velocities[getIdxKernel(rightX, topY)];
+//		adjVelocities[2] = velocities[getIdxKernel(leftX, bottomY)];
+//		adjVelocities[3] = velocities[getIdxKernel(rightX, bottomY)];
+//
+//		float horizontalRatio = x - leftX;
+//		float verticalRatio = y - bottomY;
+//
+//		glm::vec2 topVelocity = adjVelocities[0] * horizontalRatio + adjVelocities[1] * (1.0f - horizontalRatio);
+//		glm::vec2 bottomVelocity = adjVelocities[2] * horizontalRatio + adjVelocities[3] * (1.0f - horizontalRatio);
+//
+//		glm::vec2 finalVelocity = bottomVelocity * verticalRatio + topVelocity * (1.0f - verticalRatio);
+//
+//
+//
+//		//particleVertices[idx] += make_float3(finalVelocity.x, 0.0f);
+//		particleVertices[idx].x += finalVelocity.x;
+//		particleVertices[idx].y += finalVelocity.y;
+//
+//
+//		//particleColors[idx] = glm::vec3(glm::length2(finalVelocity) * 4.0f);
+//		//particleColors[idx] = mapToColor(glm::length2(finalVelocity) * 4.0f);
+//		particleColors[idx] = mapToViridis2D(glm::length2(finalVelocity) * 4.0f);
+//
+//		if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1 ||
+//			particleVertices[idx].y <= 0.0f || particleVertices[idx].y >= d_latticeHeight - 1) {
+//			if (d_mirrorSides) {
+//				if (particleVertices[idx].x <= 0.0f || particleVertices[idx].x >= d_latticeWidth - 1) {
+//					particleVertices[idx].x = 0.0f;
+//					particleVertices[idx].y = rand2D(idx, y) * (d_latticeHeight - 1);
+//
+//					////particleVertices[idx].y = d_respawnIndex++;
+//					//particleVertices[idx].y = d_respawnIndex;
+//					//atomicAdd(&d_respawnIndex, 1);
+//					//if (d_respawnIndex >= d_respawnMaxY) {
+//					//	//d_respawnIndex = d_respawnMinY;
+//					//	atomicExch(&d_respawnIndex, d_respawnMinY);
+//					//}
+//				} else {
+//					particleVertices[idx].y = (float)((int)(particleVertices[idx].y + d_latticeHeight - 1) % (d_latticeHeight - 1));
+//				}
+//			} else {
+//				particleVertices[idx].x = 0.0f;
+//				particleVertices[idx].y = rand2D(idx, y) * (d_latticeHeight - 1);
+//
+//				////particleVertices[idx].y = d_respawnIndex++;
+//				//particleVertices[idx].y = d_respawnIndex;
+//				//atomicAdd(&d_respawnIndex, 1);
+//				//if (d_respawnIndex >= d_respawnMaxY) {
+//				//	//d_respawnIndex = d_respawnMinY;
+//				//	atomicExch(&d_respawnIndex, d_respawnMinY);
+//				//}
+//			}
+//			particleVertices[idx].z = 0.0f;
+//		}
+//
+//		idx += blockDim.x * gridDim.x;
+//
+//
+//	}
+//}
+
 
 
 /// Kernel for moving particles that uses OpenGL interoperability.
@@ -633,7 +714,7 @@ LBM2D_1D_indices::LBM2D_1D_indices() {
 }
 
 LBM2D_1D_indices::LBM2D_1D_indices(glm::ivec3 dim, string sceneFilename, float tau, ParticleSystem *particleSystem, int numThreads) : LBM(dim, sceneFilename, tau, particleSystem), numThreads(numThreads) {
-	
+
 
 	initScene();
 
@@ -773,7 +854,7 @@ void LBM2D_1D_indices::draw(ShaderProgram &shader) {
 	//cout << "Velocity arrows size = " << velocityArrows.size() << endl;
 
 #ifdef DRAW_VELOCITY_ARROWS
-	shader.setVec3("uColor", glm::vec3(0.2f, 0.3f, 1.0f));
+	shader.setVec3("uColor", glm::vec3(0.4f, 0.6f, 1.0f));
 	glBindVertexArray(velocityVAO);
 	glBindBuffer(GL_ARRAY_BUFFER, velocityVBO);
 
@@ -808,6 +889,7 @@ void LBM2D_1D_indices::doStep() {
 
 	updateInlets();
 	streamingStep();
+
 	updateColliders();
 
 	collisionStep();
@@ -817,6 +899,28 @@ void LBM2D_1D_indices::doStep() {
 	moveParticles();
 
 	swapLattices();
+
+
+}
+
+void LBM2D_1D_indices::doStepNew() {
+
+	clearBackLattice();
+
+	streamingStepNew();
+	updateInlets();
+
+	if (updateCollidersMode == 0) {
+		updateColliders();
+	}
+
+	collisionStep();
+
+
+	moveParticles();
+
+	swapLattices();
+
 
 
 }
@@ -874,11 +978,30 @@ void LBM2D_1D_indices::clearBackLattice() {
 #endif
 }
 
-void LBM2D_1D_indices::streamingStep() {
+
+
+
+
+void LBM2D_1D_indices::streamingStepNew() {
+
+	//int mode = 0;
 
 	for (int x = 0; x < latticeWidth; x++) {
-//#pragma omp parallel for/* simd */
+		//#pragma omp parallel for/* simd */
 		for (int y = 0; y < latticeHeight; y++) {
+
+			int idx = getIdx(x, y);
+
+
+
+			if (streamingStepMode == 2) {
+				if (tCol->area[idx]) {
+					continue;
+				}
+			}
+
+
+
 
 			backLattice[getIdx(x, y)].adj[DIR_MIDDLE] += frontLattice[getIdx(x, y)].adj[DIR_MIDDLE];
 
@@ -892,6 +1015,143 @@ void LBM2D_1D_indices::streamingStep() {
 			top = y + 1;
 			bottom = y - 1;
 			if (right > latticeWidth - 1) {
+				right = 0;
+			}
+			if (left < 0) {
+				left = latticeWidth - 1;
+			}
+			if (top > latticeHeight - 1) {
+				top = 0;
+			}
+			if (bottom < 0) {
+				bottom = latticeHeight - 1;
+			}
+
+
+
+
+			if (streamingStepMode == 0) {
+				backLattice[getIdx(left, y)].adj[DIR_LEFT] = frontLattice[idx].adj[DIR_LEFT];
+				backLattice[getIdx(x, bottom)].adj[DIR_BOTTOM] = frontLattice[idx].adj[DIR_BOTTOM];
+				backLattice[getIdx(right, y)].adj[DIR_RIGHT] = frontLattice[idx].adj[DIR_RIGHT];
+				backLattice[getIdx(x, top)].adj[DIR_TOP] = frontLattice[idx].adj[DIR_TOP];
+				backLattice[getIdx(left, bottom)].adj[DIR_BOTTOM_LEFT] = frontLattice[idx].adj[DIR_BOTTOM_LEFT];
+				backLattice[getIdx(right, bottom)].adj[DIR_BOTTOM_RIGHT] = frontLattice[idx].adj[DIR_BOTTOM_RIGHT];
+				backLattice[getIdx(right, top)].adj[DIR_TOP_RIGHT] = frontLattice[idx].adj[DIR_TOP_RIGHT];
+				backLattice[getIdx(left, top)].adj[DIR_TOP_LEFT] = frontLattice[idx].adj[DIR_TOP_LEFT];
+			} else if (streamingStepMode == 1) {
+				backLattice[idx].adj[DIR_RIGHT] = frontLattice[getIdx(left, y)].adj[DIR_RIGHT];
+				backLattice[idx].adj[DIR_TOP] = frontLattice[getIdx(x, bottom)].adj[DIR_TOP];
+				backLattice[idx].adj[DIR_LEFT] = frontLattice[getIdx(right, y)].adj[DIR_LEFT];
+				backLattice[idx].adj[DIR_BOTTOM] = frontLattice[getIdx(x, top)].adj[DIR_BOTTOM];
+				backLattice[idx].adj[DIR_TOP_RIGHT] = frontLattice[getIdx(left, bottom)].adj[DIR_TOP_RIGHT];
+				backLattice[idx].adj[DIR_TOP_LEFT] = frontLattice[getIdx(right, bottom)].adj[DIR_TOP_LEFT];
+				backLattice[idx].adj[DIR_BOTTOM_LEFT] = frontLattice[getIdx(right, top)].adj[DIR_BOTTOM_LEFT];
+				backLattice[idx].adj[DIR_BOTTOM_RIGHT] = frontLattice[getIdx(left, top)].adj[DIR_BOTTOM_RIGHT];
+			} else if (streamingStepMode == 2) {
+
+
+				int tmp;
+
+				tmp = getIdx(left, y);
+				if (tCol->area[tmp]) {
+					backLattice[tmp].adj[DIR_RIGHT] = frontLattice[idx].adj[DIR_LEFT];
+				} else {
+					backLattice[tmp].adj[DIR_LEFT] = frontLattice[idx].adj[DIR_LEFT];
+				}
+
+				tmp = getIdx(x, bottom);
+				if (tCol->area[tmp]) {
+					backLattice[tmp].adj[DIR_TOP] = frontLattice[idx].adj[DIR_BOTTOM];
+				} else {
+					backLattice[tmp].adj[DIR_BOTTOM] = frontLattice[idx].adj[DIR_BOTTOM];
+				}
+
+				tmp = getIdx(right, y);
+				if (tCol->area[tmp]) {
+					backLattice[tmp].adj[DIR_LEFT] = frontLattice[idx].adj[DIR_RIGHT];
+				} else {
+					backLattice[tmp].adj[DIR_RIGHT] = frontLattice[idx].adj[DIR_RIGHT];
+				}
+				tmp = getIdx(x, top);
+				if (tCol->area[tmp]) {
+					backLattice[tmp].adj[DIR_BOTTOM] = frontLattice[idx].adj[DIR_TOP];
+				} else {
+					backLattice[tmp].adj[DIR_TOP] = frontLattice[idx].adj[DIR_TOP];
+				}
+
+				tmp = getIdx(left, bottom);
+				if (tCol->area[tmp]) {
+					backLattice[tmp].adj[DIR_TOP_RIGHT] = frontLattice[idx].adj[DIR_BOTTOM_LEFT];
+				} else {
+					backLattice[tmp].adj[DIR_BOTTOM_LEFT] = frontLattice[idx].adj[DIR_BOTTOM_LEFT];
+				}
+
+
+				tmp = getIdx(right, bottom);
+				if (tCol->area[tmp]) {
+					backLattice[tmp].adj[DIR_TOP_LEFT] = frontLattice[idx].adj[DIR_BOTTOM_RIGHT];
+				} else {
+					backLattice[tmp].adj[DIR_BOTTOM_RIGHT] = frontLattice[idx].adj[DIR_BOTTOM_RIGHT];
+				}
+
+
+				tmp = getIdx(right, top);
+				if (tCol->area[tmp]) {
+					backLattice[tmp].adj[DIR_BOTTOM_LEFT] = frontLattice[idx].adj[DIR_TOP_RIGHT];
+				} else {
+					backLattice[tmp].adj[DIR_TOP_RIGHT] = frontLattice[idx].adj[DIR_TOP_RIGHT];
+				}
+
+
+				tmp = getIdx(left, top);
+				if (tCol->area[tmp]) {
+					backLattice[tmp].adj[DIR_BOTTOM_RIGHT] = frontLattice[idx].adj[DIR_TOP_LEFT];
+				} else {
+					backLattice[tmp].adj[DIR_TOP_LEFT] = frontLattice[idx].adj[DIR_TOP_LEFT];
+				}
+			}
+
+
+
+			for (int i = 0; i < 9; i++) {
+				if (backLattice[idx].adj[i] < 0.0f) {
+					backLattice[idx].adj[i] = 0.0f;
+				} else if (backLattice[idx].adj[i] > 1.0f) {
+					backLattice[idx].adj[i] = 1.0f;
+				}
+			}
+
+		}
+	}
+}
+
+
+
+
+
+
+
+void LBM2D_1D_indices::streamingStep() {
+
+	for (int x = 0; x < latticeWidth; x++) {
+		//#pragma omp parallel for/* simd */
+		for (int y = 0; y < latticeHeight; y++) {
+
+			backLattice[getIdx(x, y)].adj[DIR_MIDDLE] += frontLattice[getIdx(x, y)].adj[DIR_MIDDLE];
+
+			int right;
+			int left;
+			int top;
+			int bottom;
+
+			right = x + 1;
+			left = x - 1;
+			top = y + 1;
+			bottom = y - 1;
+
+			/*
+			if (right > latticeWidth - 1) {
 				right = latticeWidth - 1;
 			}
 			if (left < 0) {
@@ -903,7 +1163,19 @@ void LBM2D_1D_indices::streamingStep() {
 			if (bottom < 0) {
 				bottom = 0;
 			}
-
+			*/
+			if (right > latticeWidth - 1) {
+				right = 0;
+			}
+			if (left < 0) {
+				left = latticeWidth - 1;
+			}
+			if (top > latticeHeight - 1) {
+				top = 0;
+			}
+			if (bottom < 0) {
+				bottom = latticeHeight - 1;
+			}
 
 			backLattice[getIdx(x, y)].adj[DIR_RIGHT] += frontLattice[getIdx(left, y)].adj[DIR_RIGHT];
 			backLattice[getIdx(x, y)].adj[DIR_TOP] += frontLattice[getIdx(x, bottom)].adj[DIR_TOP];
@@ -933,7 +1205,7 @@ void LBM2D_1D_indices::collisionStep() {
 	float weightDiagonal = 1.0f / 36.0f;
 
 	for (int x = 0; x < latticeWidth; x++) {
-//#pragma omp parallel for /*simd*/
+		//#pragma omp parallel for /*simd*/
 		for (int y = 0; y < latticeHeight; y++) {
 
 
@@ -945,7 +1217,7 @@ void LBM2D_1D_indices::collisionStep() {
 			velocities[idx] = glm::vec2(macroVelocity.x, macroVelocity.y);
 
 #ifdef DRAW_VELOCITY_ARROWS
-			velocityArrows.push_back(glm::vec3(x, y, -0.5f));
+			velocityArrows.push_back(glm::vec3(x, y, -1.0f));
 			velocityArrows.push_back(glm::vec3(velocities[idx] * 5.0f, -1.0f) + glm::vec3(x, y, 0.0f));
 #endif
 
@@ -1135,7 +1407,7 @@ void LBM2D_1D_indices::collisionStepStreamlined() {
 			velocities[idx] = glm::vec2(macroVelocity.x, macroVelocity.y);
 
 #ifdef DRAW_VELOCITY_ARROWS
-			velocityArrows.push_back(glm::vec3(x, y, -0.5f));
+			velocityArrows.push_back(glm::vec3(x, y, -1.0f));
 			velocityArrows.push_back(glm::vec3(velocities[idx] * 5.0f, -1.0f) + glm::vec3(x, y, 0.0f));
 #endif
 
@@ -1194,10 +1466,16 @@ void LBM2D_1D_indices::moveParticles() {
 
 	glm::vec2 adjVelocities[4];
 
-//#pragma omp parallel for/* simd*/
+	//#pragma omp parallel for/* simd*/
 	for (int i = 0; i < particleSystem->numParticles; i++) {
 		float x = particleVertices[i].x;
 		float y = particleVertices[i].y;
+
+		if (isnan(x) || isnan(y)) {
+			//cout << "NaN found!" << endl;
+			continue;
+		}
+
 
 		//printf("OpenMP move particles num threads = %d\n", omp_get_num_threads());
 
@@ -1276,7 +1554,7 @@ void LBM2D_1D_indices::moveParticles() {
 				}
 			}
 		}
-	}
+}
 	streamLineCounter++;
 	if (streamLineCounter > MAX_STREAMLINE_LENGTH) {
 		streamLineCounter = 0;
@@ -1465,7 +1743,7 @@ void LBM2D_1D_indices::initBuffers() {
 
 
 
-}
+		}
 
 void LBM2D_1D_indices::initLattice() {
 	float weightMiddle = 4.0f / 9.0f;
@@ -1475,6 +1753,16 @@ void LBM2D_1D_indices::initLattice() {
 	for (int x = 0; x < latticeWidth; x++) {
 		for (int y = 0; y < latticeHeight; y++) {
 			int idx = getIdx(x, y);
+
+			if (streamingStepMode == 2) {
+				if (tCol->area[idx]) {
+					for (int i = 0; i < 9; i++) {
+						frontLattice[idx].adj[i] = 0.0f;
+					}
+				}
+				continue;
+			}
+
 			frontLattice[idx].adj[DIR_MIDDLE] = weightMiddle;
 			for (int dir = 1; dir <= 4; dir++) {
 				frontLattice[idx].adj[dir] = weightAxis;

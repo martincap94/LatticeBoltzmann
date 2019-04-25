@@ -200,6 +200,8 @@ int pauseKey = GLFW_KEY_T;				///< Pause key
 int prevResetKeyState = GLFW_RELEASE;	///< Reset key state from previous frame
 int resetKey = GLFW_KEY_R;				///< Reset key
 
+int useExperimentalSimulation = 1;
+
 
 /// Main - runs the application and sets seed for the random number generator.
 int main(int argc, char **argv) {
@@ -473,7 +475,13 @@ int runApp() {
 			if (useCUDA) {
 				lbm->doStepCUDA();
 			} else {
-				lbm->doStep();
+
+				if (useExperimentalSimulation) {
+
+					lbm->doStepNew();
+				} else {
+					lbm->doStep();
+				}
 			}
 		}
 
@@ -878,6 +886,18 @@ void constructUserInterface(nk_context *ctx, nk_colorf &particlesColor) {
 		enum { EASY, HARD };
 		//static int op = EASY;
 		//static int property = 20;
+
+		nk_layout_row_dynamic(ctx, 30, 1);
+		if (nk_checkbox_label(ctx, "Experimental Simulation", &useExperimentalSimulation)) {
+			//lbm->resetSimulation();
+		}
+		if (useExperimentalSimulation) {
+			nk_property_int(ctx, "Streaming step mode", 0, &lbm->streamingStepMode, 2, 1, 1);
+			nk_property_int(ctx, "Update colliders mode", 0, &lbm->updateCollidersMode, 1, 1, 1);
+		}
+
+
+
 		nk_layout_row_static(ctx, 30, 80, 3);
 		if (nk_button_label(ctx, "Reset")) {
 			//fprintf(stdout, "button pressed\n");

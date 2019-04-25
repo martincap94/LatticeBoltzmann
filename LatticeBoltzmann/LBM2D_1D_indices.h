@@ -135,9 +135,13 @@ public:
 	virtual void draw(ShaderProgram &shader);
 
 	virtual void doStep();
+	virtual void doStepNew();
 	virtual void doStepCUDA();
 
 	virtual void clearBackLattice();
+
+	virtual void streamingStepNew();
+
 	virtual void streamingStep();
 	virtual void collisionStep();
 
